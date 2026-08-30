@@ -3,7 +3,8 @@ const ProyectosService = require("../services/proyectos.service");
 
 exports.listar = async (req, res) => {
   try {
-    const proyectos = await ProyectosModel.obtenerTodos();
+    const { tech } = req.query;
+    const proyectos = await ProyectosModel.obtenerTodos({ tech });
     res.json(proyectos);
   } catch (error) {
     res.status(500).json({ error: "Error al obtener proyectos", detalle: error.message });
@@ -37,6 +38,19 @@ exports.actualizar = async (req, res) => {
     res.json({ mensaje: "Proyecto actualizado correctamente" });
   } catch (error) {
     res.status(400).json({ error: "Error al actualizar", detalle: error.message });
+  }
+};
+
+exports.reordenar = async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: "Se requiere un array de items con _id y orden" });
+    }
+    await ProyectosModel.reordenar(items);
+    res.json({ mensaje: "Orden de proyectos actualizado con éxito" });
+  } catch (error) {
+    res.status(500).json({ error: "Error al reordenar proyectos", detalle: error.message });
   }
 };
 

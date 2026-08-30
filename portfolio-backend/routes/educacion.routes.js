@@ -1,25 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const { body } = require("express-validator");
 const ctrl = require("../controllers/educacion.controller");
 const requireAuth = require("../middlewares/requireAuth");
-const validar = require("../middlewares/validar");
+const requireRole = require("../middlewares/requireRole");
 
+// Rutas públicas
 router.get("/", ctrl.listar);
 router.get("/:id", ctrl.obtenerUno);
 
-router.post(
-  "/",
-  requireAuth,
-  [
-    body("institucion").notEmpty().withMessage("La institución es obligatoria"),
-    body("titulo").notEmpty().withMessage("El título es obligatorio"),
-  ],
-  validar,
-  ctrl.crear
-);
-
+// Rutas protegidas
+router.post("/", requireAuth, ctrl.crear);
 router.put("/:id", requireAuth, ctrl.actualizar);
-router.delete("/:id", requireAuth, ctrl.eliminar);
+
+// Solo admin puede eliminar (Reto 5)
+router.delete("/:id", requireAuth, requireRole("admin"), ctrl.eliminar);
 
 module.exports = router;

@@ -34,6 +34,8 @@ app.use("/api/proyectos", require("./routes/proyectos.routes"));
 app.use("/api/experiencia", require("./routes/experiencia.routes"));
 app.use("/api/educacion", require("./routes/educacion.routes"));
 app.use("/api/skills", require("./routes/skills.routes"));
+app.use("/api/visitas", require("./routes/visitas.routes"));
+app.use("/api/contacto", require("./routes/contacto.routes"));
 
 const PORT = process.env.PORT || 4000;
 

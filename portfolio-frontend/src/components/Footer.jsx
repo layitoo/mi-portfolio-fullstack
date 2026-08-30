@@ -1,4 +1,4 @@
-export default function Footer({ perfil }) {
+export default function Footer({ perfil, visitas }) {
   const anio = new Date().getFullYear();
 
   const handleScrollTo = (e, id) => {
@@ -12,7 +12,7 @@ export default function Footer({ perfil }) {
   const nombreCompleto = perfil?.nombre || "Leandro Martin Lalanda";
 
   return (
-    <footer className="mt-32 border-t border-white/5 py-16 text-center text-xs text-neutral-500 bg-[#030304] relative overflow-hidden">
+    <footer className="mt-32 border-t border-white/5 py-16 text-center text-xs text-neutral-500 bg-[#030304]/80 backdrop-blur-md relative overflow-hidden">
       {/* Subtle bottom glow */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
 
@@ -22,7 +22,15 @@ export default function Footer({ perfil }) {
           {nombreCompleto}
         </div>
 
-        <div className="flex items-center justify-center gap-6 mb-4 text-xs text-neutral-400 font-medium">
+        {/* Reto 2: Contador de visitas al portfolio */}
+        {visitas !== undefined && visitas !== null && (
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.03] border border-white/10 text-[11px] text-neutral-400 font-mono mb-6 backdrop-blur-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>{visitas.toLocaleString()} visitas al portfolio</span>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-center gap-6 mb-4 text-xs text-neutral-400 font-medium">
           <a
             href="#proyectos"
             onClick={(e) => handleScrollTo(e, "proyectos")}
@@ -50,6 +58,13 @@ export default function Footer({ perfil }) {
             className="hover:text-white transition cursor-pointer"
           >
             Educación
+          </a>
+          <a
+            href="#contacto"
+            onClick={(e) => handleScrollTo(e, "contacto")}
+            className="hover:text-white transition cursor-pointer"
+          >
+            Contacto
           </a>
         </div>
 

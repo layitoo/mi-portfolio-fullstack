@@ -6,11 +6,15 @@ const requireAuth = require("../middlewares/requireAuth");
 const validar = require("../middlewares/validar");
 const upload = require("../middlewares/upload");
 
+const requireRole = require("../middlewares/requireRole");
+
 // Rutas públicas
 router.get("/", ctrl.listar);
 router.get("/:id", ctrl.obtenerUno);
 
-// Rutas protegidas (Admin) con validaciones de express-validator
+// Rutas protegidas (Admin / Editor)
+router.put("/reordenar", requireAuth, ctrl.reordenar);
+
 router.post(
   "/",
   requireAuth,
@@ -33,7 +37,9 @@ router.put(
 );
 
 router.patch("/:id/destacar", requireAuth, ctrl.destacar);
-router.delete("/:id", requireAuth, ctrl.eliminar);
+
+// Solo admin puede eliminar proyectos (Reto 5)
+router.delete("/:id", requireAuth, requireRole("admin"), ctrl.eliminar);
 
 // Subida de imagen a Cloudinary/Multer
 router.post("/:id/imagen", requireAuth, upload.single("imagen"), ctrl.subirImagen);

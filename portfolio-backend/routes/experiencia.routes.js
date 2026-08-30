@@ -3,6 +3,7 @@ const router = express.Router();
 const { body } = require("express-validator");
 const ctrl = require("../controllers/experiencia.controller");
 const requireAuth = require("../middlewares/requireAuth");
+const requireRole = require("../middlewares/requireRole");
 const validar = require("../middlewares/validar");
 
 // Rutas públicas
@@ -22,6 +23,8 @@ router.post(
 );
 
 router.put("/:id", requireAuth, ctrl.actualizar);
-router.delete("/:id", requireAuth, ctrl.eliminar);
+
+// Solo admin puede eliminar (Reto 5)
+router.delete("/:id", requireAuth, requireRole("admin"), ctrl.eliminar);
 
 module.exports = router;

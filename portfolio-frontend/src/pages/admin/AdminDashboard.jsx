@@ -9,6 +9,7 @@ import {
   obtenerProyectos,
   crearProyecto,
   actualizarProyecto,
+  reordenarProyectos,
   eliminarProyecto,
 } from "../../services/proyectos.service";
 import {
@@ -43,13 +44,20 @@ import {
   Edit2,
   CheckCircle2,
   X,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+  Shield,
+  ShieldAlert,
 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { logout } = useAuth();
+  const { usuario, logout } = useAuth();
+  const esAdmin = (usuario?.rol || "admin") === "admin";
   const [tabActiva, setTabActiva] = useState("perfil");
   const [mensajeExito, setMensajeExito] = useState("");
   const [advertenciaImagen, setAdvertenciaImagen] = useState("");
+  const [arrastrandoIndex, setArrastrandoIndex] = useState(null);
 
   // Datos principales
   const [perfil, setPerfil] = useState({
@@ -270,14 +278,55 @@ export default function AdminDashboard() {
     }
   };
 
+  // Reto 1: Reordenar Proyectos (Drag & Drop + ⬆️/⬇️)
+  const handleMoverProyecto = async (indexActual, nuevoIndex) => {
+    if (nuevoIndex < 0 || nuevoIndex >= proyectos.length) return;
+    const lista = [...proyectos];
+    const [movido] = lista.splice(indexActual, 1);
+    lista.splice(nuevoIndex, 0, movido);
+    setProyectos(lista);
+
+    try {
+      await reordenarProyectos(lista.map((p, i) => ({ _id: p._id, orden: i })));
+      notificar("Orden de proyectos actualizado 🔄");
+    } catch (err) {
+      console.error("Error al reordenar proyectos:", err);
+    }
+  };
+
+  const handleDragStart = (e, index) => {
+    setArrastrandoIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e, targetIndex) => {
+    e.preventDefault();
+    if (arrastrandoIndex === null || arrastrandoIndex === targetIndex) {
+      setArrastrandoIndex(null);
+      return;
+    }
+    await handleMoverProyecto(arrastrandoIndex, targetIndex);
+    setArrastrandoIndex(null);
+  };
+
   const handleEliminarProyecto = async (id) => {
+    if (!esAdmin) {
+      alert("Permiso denegado: Solo los usuarios Administradores pueden eliminar registros (Rol actual: Editor).");
+      return;
+    }
     if (!confirm("¿Seguro que querés borrar este proyecto?")) return;
     try {
       await eliminarProyecto(id);
       setProyectos(proyectos.filter((p) => p._id !== id));
       notificar("Proyecto eliminado");
     } catch (err) {
-      alert("Error al eliminar proyecto");
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || "Error al eliminar proyecto";
+      alert(msg);
     }
   };
 
@@ -319,13 +368,18 @@ export default function AdminDashboard() {
   };
 
   const handleEliminarExperiencia = async (id) => {
+    if (!esAdmin) {
+      alert("Permiso denegado: Solo los usuarios Administradores pueden eliminar registros (Rol actual: Editor).");
+      return;
+    }
     if (!confirm("¿Seguro que querés eliminar esta experiencia?")) return;
     try {
       await eliminarExperiencia(id);
       setExperiencias(experiencias.filter((e) => e._id !== id));
       notificar("Experiencia eliminada");
     } catch (err) {
-      alert("Error al eliminar");
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || "Error al eliminar";
+      alert(msg);
     }
   };
 
@@ -367,13 +421,18 @@ export default function AdminDashboard() {
   };
 
   const handleEliminarEducacion = async (id) => {
+    if (!esAdmin) {
+      alert("Permiso denegado: Solo los usuarios Administradores pueden eliminar registros (Rol actual: Editor).");
+      return;
+    }
     if (!confirm("¿Seguro que querés eliminar esta educación?")) return;
     try {
       await eliminarEducacion(id);
       setEducacion(educacion.filter((e) => e._id !== id));
       notificar("Educación eliminada");
     } catch (err) {
-      alert("Error al eliminar");
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || "Error al eliminar";
+      alert(msg);
     }
   };
 
@@ -415,13 +474,18 @@ export default function AdminDashboard() {
   };
 
   const handleEliminarSkill = async (id) => {
+    if (!esAdmin) {
+      alert("Permiso denegado: Solo los usuarios Administradores pueden eliminar registros (Rol actual: Editor).");
+      return;
+    }
     if (!confirm("¿Seguro que querés borrar esta skill?")) return;
     try {
       await eliminarSkill(id);
       setSkills(skills.filter((s) => s._id !== id));
       notificar("Skill eliminada");
     } catch (err) {
-      alert("Error al eliminar");
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || "Error al eliminar";
+      alert(msg);
     }
   };
 
@@ -436,10 +500,20 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
-          <h2 className="text-lg font-bold text-white mb-6 tracking-tight flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center shadow-sm">◈</span>
-            Admin Panel
-          </h2>
+          <div className="flex items-center gap-3 mb-6">
+            <span className="w-8 h-8 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center shadow-md shadow-white/10 shrink-0">◈</span>
+            <div>
+              <h2 className="text-sm font-bold text-white tracking-tight">Panel de Control</h2>
+              <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono mt-0.5 ${
+                esAdmin
+                  ? "bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                  : "bg-blue-500/10 text-blue-300 border border-blue-500/20"
+              }`}>
+                {esAdmin ? <Shield className="w-2.5 h-2.5" /> : <Edit2 className="w-2.5 h-2.5" />}
+                {esAdmin ? "Administrador" : "Editor"}
+              </span>
+            </div>
+          </div>
 
           <nav className="space-y-1 text-xs font-medium">
             <button
@@ -782,23 +856,62 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Lista de Proyectos con Edición Desplegable In-Line Smooth Accordion */}
+            {/* Lista de Proyectos con Edición Desplegable In-Line Smooth Accordion & Reordenamiento Drag & Drop */}
             <div className="space-y-4">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                Proyectos Actuales ({proyectos.length})
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                  Proyectos Actuales ({proyectos.length})
+                </h4>
+                <span className="text-[11px] text-neutral-500 hidden sm:inline-block">
+                  💡 Arrastrá las tarjetas o usá las flechas para ordenar
+                </span>
+              </div>
 
-              {proyectos.map((p) => {
+              {proyectos.map((p, index) => {
                 const estaEditando = editandoProyectoId === p._id;
+                const estaArrastrando = arrastrandoIndex === index;
 
                 return (
                   <div
                     key={p._id}
-                    className="glass-panel rounded-3xl overflow-hidden transition-all duration-300"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, index)}
+                    className={`glass-panel rounded-3xl overflow-hidden transition-all duration-300 ${
+                      estaArrastrando ? "opacity-40 scale-[0.98] border-white/40" : ""
+                    }`}
                   >
                     {/* Header de la tarjeta */}
                     <div className="p-5 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Drag Handle & Flechas de Orden */}
+                        <div className="flex items-center gap-1 text-neutral-500 shrink-0">
+                          <span className="cursor-grab active:cursor-grabbing p-1 hover:text-white transition" title="Arrastrar para ordenar">
+                            <GripVertical className="w-4 h-4" />
+                          </span>
+                          <div className="flex flex-col">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => handleMoverProyecto(index, index - 1)}
+                              className="p-0.5 hover:text-white disabled:opacity-20 disabled:hover:text-neutral-500 transition cursor-pointer"
+                              title="Subir orden"
+                            >
+                              <ChevronUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === proyectos.length - 1}
+                              onClick={() => handleMoverProyecto(index, index + 1)}
+                              className="p-0.5 hover:text-white disabled:opacity-20 disabled:hover:text-neutral-500 transition cursor-pointer"
+                              title="Bajar orden"
+                            >
+                              <ChevronDown className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
                         {p.imagenUrl && (
                           <div className="w-16 h-12 rounded-xl overflow-hidden bg-black shrink-0 border border-white/10">
                             <img src={p.imagenUrl} alt={p.titulo} className="w-full h-full object-cover" />
@@ -806,6 +919,7 @@ export default function AdminDashboard() {
                         )}
                         <div className="min-w-0">
                           <h5 className="font-bold text-sm text-white truncate flex items-center gap-2">
+                            <span className="text-xs font-mono text-neutral-500">#{index + 1}</span>
                             {p.titulo}
                             {p.destacado && <span className="text-[10px] text-amber-300 font-normal">★ Destacado</span>}
                           </h5>
@@ -827,8 +941,12 @@ export default function AdminDashboard() {
                         </button>
                         <button
                           onClick={() => handleEliminarProyecto(p._id)}
-                          title="Eliminar"
-                          className="p-2 rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
+                          title={esAdmin ? "Eliminar proyecto" : "Función restringida a Administradores"}
+                          className={`p-2 rounded-full transition cursor-pointer ${
+                            esAdmin
+                              ? "text-neutral-400 hover:text-red-400 hover:bg-red-500/10"
+                              : "text-neutral-600 opacity-40 hover:opacity-70"
+                          }`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
