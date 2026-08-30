@@ -43,9 +43,9 @@ export default function Hero({ perfil }) {
 
         {/* Headline */}
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08] mb-5">
-          Desarrollo Software &{" "}
+          Desarrollo de Videojuegos &{" "}
           <span className="bg-gradient-to-b from-white via-neutral-200 to-neutral-500 bg-clip-text text-transparent">
-            Experiencias Digitales.
+            Diseño 3D.
           </span>
         </h1>
 

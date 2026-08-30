@@ -2,21 +2,21 @@ require("dotenv").config();
 const bcrypt = require("bcrypt");
 const { conectarDB, getDB } = require("./config/db");
 
-async function crearAdmin() {
+async function crearUsuarios() {
   await conectarDB();
   const db = getDB();
 
-  const email = "admin@miportfolio.com";
-  const passwordPlano = "admin123";
-
-  const passwordHash = await bcrypt.hash(passwordPlano, 10);
+  // 1. Usuario Administrador (Acceso total)
+  const adminEmail = "admin@miportfolio.com";
+  const adminPass = "admin123";
+  const adminHash = await bcrypt.hash(adminPass, 10);
 
   await db.collection("usuarios").updateOne(
-    { email },
+    { email: adminEmail },
     {
       $set: {
-        email,
-        passwordHash,
+        email: adminEmail,
+        passwordHash: adminHash,
         rol: "admin",
         cuentaVerificada: true,
         actualizadoEn: new Date().toISOString(),
@@ -25,12 +25,37 @@ async function crearAdmin() {
     { upsert: true }
   );
 
+  // 2. Usuario Editor (Puede crear y editar, pero NO eliminar - Reto 5)
+  const editorEmail = "editor@miportfolio.com";
+  const editorPass = "editor123";
+  const editorHash = await bcrypt.hash(editorPass, 10);
+
+  await db.collection("usuarios").updateOne(
+    { email: editorEmail },
+    {
+      $set: {
+        email: editorEmail,
+        passwordHash: editorHash,
+        rol: "editor",
+        cuentaVerificada: true,
+        actualizadoEn: new Date().toISOString(),
+      },
+    },
+    { upsert: true }
+  );
+
+  console.log("=========================================");
+  console.log("✅ Cuentas de acceso configuradas con éxito:");
   console.log("-----------------------------------------");
-  console.log("✅ Usuario Administrador configurado con éxito:");
-  console.log(`👤 Email:      ${email}`);
-  console.log(`🔑 Contraseña: ${passwordPlano}`);
+  console.log("👑 ADMINISTRADOR (Acceso Total):");
+  console.log(`   Email:      ${adminEmail}`);
+  console.log(`   Password:   ${adminPass}`);
   console.log("-----------------------------------------");
+  console.log("✏️ EDITOR (Creación y Edición sin borrado):");
+  console.log(`   Email:      ${editorEmail}`);
+  console.log(`   Password:   ${editorPass}`);
+  console.log("=========================================");
   process.exit(0);
 }
 
-crearAdmin().catch(console.error);
+crearUsuarios().catch(console.error);

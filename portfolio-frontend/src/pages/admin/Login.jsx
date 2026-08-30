@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Lock, Mail, AlertCircle, ArrowLeft } from "lucide-react";
 import ChromeStar from "../../components/ChromeStar";
+import LiquidChromeCanvas from "../../components/LiquidChromeCanvas";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -29,16 +30,19 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#030304] bg-grid-pattern px-4 relative overflow-hidden">
-      {/* Background Chrome Star Accents */}
-      <div className="absolute top-12 right-12 opacity-30 pointer-events-none hidden sm:block">
-        <ChromeStar size={70} />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 selection:bg-white selection:text-black">
+      {/* Procedural Liquid Chrome Canvas Background */}
+      <LiquidChromeCanvas />
+
+      {/* Floating 3D Chrome Star Accents */}
+      <div className="absolute top-12 right-12 opacity-40 pointer-events-none hidden sm:block z-0 animate-float">
+        <ChromeStar size={75} />
       </div>
-      <div className="absolute bottom-12 left-12 opacity-20 pointer-events-none hidden sm:block">
-        <ChromeStar size={50} />
+      <div className="absolute bottom-12 left-12 opacity-25 pointer-events-none hidden sm:block z-0 animate-float" style={{ animationDelay: "-3s" }}>
+        <ChromeStar size={55} />
       </div>
 
-      <div className="glass-panel relative w-full max-w-md rounded-3xl p-8 sm:p-10 shadow-2xl z-10">
+      <div className="glass-panel relative w-full max-w-md rounded-3xl p-8 sm:p-10 shadow-2xl z-10 border border-white/10 backdrop-blur-xl">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-white mb-6 transition"
@@ -47,7 +51,7 @@ export default function Login() {
         </Link>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm shadow-lg shadow-white/10">
+          <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm shadow-lg shadow-white/10 shrink-0">
             ◈
           </div>
           <div>
@@ -55,7 +59,7 @@ export default function Login() {
               Ingresar
             </h1>
             <p className="text-xs text-neutral-400">
-              Acceso exclusivo para el administrador
+              Acceso exclusivo para desarrolladores
             </p>
           </div>
         </div>
@@ -80,7 +84,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu-email@ejemplo.com"
-                className="w-full pl-10 pr-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                className="w-full pl-10 pr-4 py-2.5 bg-black/60 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
               />
             </div>
           </div>
@@ -97,7 +101,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                className="w-full pl-10 pr-4 py-2.5 bg-black/60 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
               />
             </div>
           </div>
