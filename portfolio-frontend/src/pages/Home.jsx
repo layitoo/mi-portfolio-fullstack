@@ -4,7 +4,7 @@ import { obtenerProyectos } from "../services/proyectos.service";
 import { obtenerExperiencias } from "../services/experiencia.service";
 import { obtenerEducacion } from "../services/educacion.service";
 import { obtenerSkills } from "../services/skills.service";
-import { incrementarVisitas } from "../services/visitas.service";
+import { incrementarVisitas, obtenerVisitas } from "../services/visitas.service";
 
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
@@ -28,6 +28,15 @@ export default function Home() {
   useEffect(() => {
     async function cargarDatos() {
       try {
+        // Manejo de visita única por sesión (evita doble conteo por React StrictMode en desarrollo)
+        let promesaVisita;
+        if (!sessionStorage.getItem("portfolio_visita_registrada")) {
+          sessionStorage.setItem("portfolio_visita_registrada", "true");
+          promesaVisita = incrementarVisitas().catch(() => ({ total: 1 }));
+        } else {
+          promesaVisita = obtenerVisitas().catch(() => ({ total: 1 }));
+        }
+
         const [perfilData, proyectosData, experienciasData, educacionData, skillsData, visitasData] =
           await Promise.all([
             obtenerPerfil().catch(() => null),
@@ -35,7 +44,7 @@ export default function Home() {
             obtenerExperiencias().catch(() => []),
             obtenerEducacion().catch(() => []),
             obtenerSkills().catch(() => []),
-            incrementarVisitas().catch(() => ({ total: 1 })),
+            promesaVisita,
           ]);
 
         setPerfil(perfilData);
