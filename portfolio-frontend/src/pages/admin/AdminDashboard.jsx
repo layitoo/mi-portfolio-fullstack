@@ -1,0 +1,1606 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import {
+  obtenerPerfil,
+  actualizarPerfil,
+} from "../../services/perfil.service";
+import {
+  obtenerProyectos,
+  crearProyecto,
+  actualizarProyecto,
+  eliminarProyecto,
+} from "../../services/proyectos.service";
+import {
+  obtenerExperiencias,
+  crearExperiencia,
+  actualizarExperiencia,
+  eliminarExperiencia,
+} from "../../services/experiencia.service";
+import {
+  obtenerEducacion,
+  crearEducacion,
+  actualizarEducacion,
+  eliminarEducacion,
+} from "../../services/educacion.service";
+import {
+  obtenerSkills,
+  crearSkill,
+  actualizarSkill,
+  eliminarSkill,
+} from "../../services/skills.service";
+
+import {
+  User,
+  Sparkles,
+  Briefcase,
+  GraduationCap,
+  Code2,
+  LogOut,
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Edit2,
+  CheckCircle2,
+  X,
+} from "lucide-react";
+
+export default function AdminDashboard() {
+  const { logout } = useAuth();
+  const [tabActiva, setTabActiva] = useState("perfil");
+  const [mensajeExito, setMensajeExito] = useState("");
+  const [advertenciaImagen, setAdvertenciaImagen] = useState("");
+
+  // Datos principales
+  const [perfil, setPerfil] = useState({
+    nombre: "",
+    titulo: "",
+    bio: "",
+    fotoUrl: "",
+    redes: { github: "", linkedin: "", email: "" },
+  });
+  const [proyectos, setProyectos] = useState([]);
+  const [experiencias, setExperiencias] = useState([]);
+  const [educacion, setEducacion] = useState([]);
+  const [skills, setSkills] = useState([]);
+
+  // Estados para creación de nuevos elementos (acordeones superiores)
+  const [mostrarCrearProyecto, setMostrarCrearProyecto] = useState(false);
+  const [nuevoProyecto, setNuevoProyecto] = useState({
+    titulo: "",
+    descripcion: "",
+    imagenUrl: "",
+    tecnologias: "",
+    repoUrl: "",
+    demoUrl: "",
+    destacado: false,
+  });
+
+  const [mostrarCrearExp, setMostrarCrearExp] = useState(false);
+  const [nuevaExp, setNuevaExp] = useState({
+    empresa: "",
+    puesto: "",
+    descripcion: "",
+    fechaInicio: "",
+    fechaFin: "",
+    actual: false,
+  });
+
+  const [mostrarCrearEdu, setMostrarCrearEdu] = useState(false);
+  const [nuevaEdu, setNuevaEdu] = useState({
+    institucion: "",
+    titulo: "",
+    fechaInicio: "",
+    fechaFin: "",
+  });
+
+  const [mostrarCrearSkill, setMostrarCrearSkill] = useState(false);
+  const [nuevaSkill, setNuevaSkill] = useState({
+    nombre: "",
+    nivel: "Intermedio",
+    categoria: "Frontend",
+  });
+
+  // Estados para edición desplegable in-line (por ID de elemento)
+  const [editandoProyectoId, setEditandoProyectoId] = useState(null);
+  const [formEditProyecto, setFormEditProyecto] = useState({});
+
+  const [editandoExpId, setEditandoExpId] = useState(null);
+  const [formEditExp, setFormEditExp] = useState({});
+
+  const [editandoEduId, setEditandoEduId] = useState(null);
+  const [formEditEdu, setFormEditEdu] = useState({});
+
+  const [editandoSkillId, setEditandoSkillId] = useState(null);
+  const [formEditSkill, setFormEditSkill] = useState({});
+
+  const notificar = (msg) => {
+    setMensajeExito(msg);
+    setTimeout(() => setMensajeExito(""), 3500);
+  };
+
+  // Compresor y validador de imagen (1080p y 10MB)
+  const procesarYComprimirImagen = (file) => {
+    return new Promise((resolve, reject) => {
+      const pesoMB = file.size / (1024 * 1024);
+      let advertencias = [];
+
+      if (pesoMB > 10) {
+        advertencias.push(`El archivo pesa ${pesoMB.toFixed(1)}MB (supera el límite de 10MB)`);
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          if (img.width > 1920 || img.height > 1080) {
+            advertencias.push(`La resolución es ${img.width}x${img.height} (supera 1080p)`);
+          }
+
+          if (advertencias.length > 0) {
+            const mensajeAdv = `⚠️ Control de imagen: ${advertencias.join(" y ")}. Se optimizó automáticamente a 1080p.`;
+            setAdvertenciaImagen(mensajeAdv);
+            setTimeout(() => setAdvertenciaImagen(""), 9000);
+          }
+
+          const maxW = 1920;
+          const maxH = 1080;
+          let w = img.width;
+          let h = img.height;
+
+          if (w > maxW || h > maxH) {
+            if (w / maxW > h / maxH) {
+              h = Math.round((h * maxW) / w);
+              w = maxW;
+            } else {
+              w = Math.round((w * maxH) / h);
+              h = maxH;
+            }
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+
+          const base64Optimizado = canvas.toDataURL("image/jpeg", 0.85);
+          resolve(base64Optimizado);
+        };
+        img.onerror = () => reject(new Error("Error procesando imagen"));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error("Error leyendo archivo"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  useEffect(() => {
+    cargarTodosLosDatos();
+  }, []);
+
+  const cargarTodosLosDatos = async () => {
+    try {
+      const [p, proy, exp, edu, sk] = await Promise.all([
+        obtenerPerfil().catch(() => null),
+        obtenerProyectos().catch(() => []),
+        obtenerExperiencias().catch(() => []),
+        obtenerEducacion().catch(() => []),
+        obtenerSkills().catch(() => []),
+      ]);
+      if (p) setPerfil(p);
+      setProyectos(proy);
+      setExperiencias(exp);
+      setEducacion(edu);
+      setSkills(sk);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // 1. Guardar Perfil
+  const handleGuardarPerfil = async (e) => {
+    e.preventDefault();
+    try {
+      const actualizado = await actualizarPerfil(perfil);
+      setPerfil(actualizado);
+      notificar("Perfil actualizado correctamente ✅");
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.detalle || "Error al actualizar perfil";
+      alert(msg);
+    }
+  };
+
+  // 2. Proyectos CRUD
+  const handleCrearProyecto = async (e) => {
+    e.preventDefault();
+    try {
+      const techsArray = typeof nuevoProyecto.tecnologias === "string"
+        ? nuevoProyecto.tecnologias.split(",").map((t) => t.trim()).filter(Boolean)
+        : nuevoProyecto.tecnologias;
+
+      const payload = { ...nuevoProyecto, tecnologias: techsArray };
+      const creado = await crearProyecto(payload);
+      setProyectos([creado, ...proyectos]);
+      notificar("Proyecto creado con éxito 🚀");
+      setNuevoProyecto({
+        titulo: "",
+        descripcion: "",
+        imagenUrl: "",
+        tecnologias: "",
+        repoUrl: "",
+        demoUrl: "",
+        destacado: false,
+      });
+      setMostrarCrearProyecto(false);
+    } catch (err) {
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al crear proyecto";
+      alert(msg);
+    }
+  };
+
+  const handleIniciarEditarProyecto = (p) => {
+    if (editandoProyectoId === p._id) {
+      setEditandoProyectoId(null);
+      setFormEditProyecto({});
+    } else {
+      setEditandoProyectoId(p._id);
+      setFormEditProyecto({
+        ...p,
+        tecnologias: Array.isArray(p.tecnologias) ? p.tecnologias.join(", ") : p.tecnologias || "",
+      });
+    }
+  };
+
+  const handleGuardarEdicionProyecto = async (id) => {
+    try {
+      const techsArray = typeof formEditProyecto.tecnologias === "string"
+        ? formEditProyecto.tecnologias.split(",").map((t) => t.trim()).filter(Boolean)
+        : formEditProyecto.tecnologias;
+
+      const payload = { ...formEditProyecto, tecnologias: techsArray };
+      await actualizarProyecto(id, payload);
+      setProyectos(proyectos.map((p) => (p._id === id ? { ...p, ...payload } : p)));
+      notificar("Proyecto actualizado correctamente 🚀");
+      setEditandoProyectoId(null);
+      setFormEditProyecto({});
+    } catch (err) {
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al actualizar proyecto";
+      alert(msg);
+    }
+  };
+
+  const handleEliminarProyecto = async (id) => {
+    if (!confirm("¿Seguro que querés borrar este proyecto?")) return;
+    try {
+      await eliminarProyecto(id);
+      setProyectos(proyectos.filter((p) => p._id !== id));
+      notificar("Proyecto eliminado");
+    } catch (err) {
+      alert("Error al eliminar proyecto");
+    }
+  };
+
+  // 3. Experiencia CRUD
+  const handleCrearExperiencia = async (e) => {
+    e.preventDefault();
+    try {
+      const creado = await crearExperiencia(nuevaExp);
+      setExperiencias([creado, ...experiencias]);
+      notificar("Experiencia agregada ✅");
+      setNuevaExp({ empresa: "", puesto: "", descripcion: "", fechaInicio: "", fechaFin: "", actual: false });
+      setMostrarCrearExp(false);
+    } catch (err) {
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al crear experiencia";
+      alert(msg);
+    }
+  };
+
+  const handleIniciarEditarExp = (exp) => {
+    if (editandoExpId === exp._id) {
+      setEditandoExpId(null);
+      setFormEditExp({});
+    } else {
+      setEditandoExpId(exp._id);
+      setFormEditExp({ ...exp });
+    }
+  };
+
+  const handleGuardarEdicionExp = async (id) => {
+    try {
+      await actualizarExperiencia(id, formEditExp);
+      setExperiencias(experiencias.map((e) => (e._id === id ? { ...e, ...formEditExp } : e)));
+      notificar("Experiencia actualizada ✅");
+      setEditandoExpId(null);
+    } catch (err) {
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al actualizar experiencia";
+      alert(msg);
+    }
+  };
+
+  const handleEliminarExperiencia = async (id) => {
+    if (!confirm("¿Seguro que querés eliminar esta experiencia?")) return;
+    try {
+      await eliminarExperiencia(id);
+      setExperiencias(experiencias.filter((e) => e._id !== id));
+      notificar("Experiencia eliminada");
+    } catch (err) {
+      alert("Error al eliminar");
+    }
+  };
+
+  // 4. Educación CRUD
+  const handleCrearEducacion = async (e) => {
+    e.preventDefault();
+    try {
+      const creado = await crearEducacion(nuevaEdu);
+      setEducacion([creado, ...educacion]);
+      notificar("Educación agregada ✅");
+      setNuevaEdu({ institucion: "", titulo: "", fechaInicio: "", fechaFin: "" });
+      setMostrarCrearEdu(false);
+    } catch (err) {
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al crear educación";
+      alert(msg);
+    }
+  };
+
+  const handleIniciarEditarEdu = (edu) => {
+    if (editandoEduId === edu._id) {
+      setEditandoEduId(null);
+      setFormEditEdu({});
+    } else {
+      setEditandoEduId(edu._id);
+      setFormEditEdu({ ...edu });
+    }
+  };
+
+  const handleGuardarEdicionEdu = async (id) => {
+    try {
+      await actualizarEducacion(id, formEditEdu);
+      setEducacion(educacion.map((e) => (e._id === id ? { ...e, ...formEditEdu } : e)));
+      notificar("Educación actualizada ✅");
+      setEditandoEduId(null);
+    } catch (err) {
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al actualizar educación";
+      alert(msg);
+    }
+  };
+
+  const handleEliminarEducacion = async (id) => {
+    if (!confirm("¿Seguro que querés eliminar esta educación?")) return;
+    try {
+      await eliminarEducacion(id);
+      setEducacion(educacion.filter((e) => e._id !== id));
+      notificar("Educación eliminada");
+    } catch (err) {
+      alert("Error al eliminar");
+    }
+  };
+
+  // 5. Skills CRUD
+  const handleCrearSkill = async (e) => {
+    e.preventDefault();
+    try {
+      const creado = await crearSkill(nuevaSkill);
+      setSkills([creado, ...skills]);
+      notificar("Skill agregada ✅");
+      setNuevaSkill({ nombre: "", nivel: "Intermedio", categoria: "Frontend" });
+      setMostrarCrearSkill(false);
+    } catch (err) {
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al crear skill";
+      alert(msg);
+    }
+  };
+
+  const handleIniciarEditarSkill = (sk) => {
+    if (editandoSkillId === sk._id) {
+      setEditandoSkillId(null);
+      setFormEditSkill({});
+    } else {
+      setEditandoSkillId(sk._id);
+      setFormEditSkill({ ...sk });
+    }
+  };
+
+  const handleGuardarEdicionSkill = async (id) => {
+    try {
+      await actualizarSkill(id, formEditSkill);
+      setSkills(skills.map((s) => (s._id === id ? { ...s, ...formEditSkill } : s)));
+      notificar("Skill actualizada ✅");
+      setEditandoSkillId(null);
+    } catch (err) {
+      const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al actualizar skill";
+      alert(msg);
+    }
+  };
+
+  const handleEliminarSkill = async (id) => {
+    if (!confirm("¿Seguro que querés borrar esta skill?")) return;
+    try {
+      await eliminarSkill(id);
+      setSkills(skills.filter((s) => s._id !== id));
+      notificar("Skill eliminada");
+    } catch (err) {
+      alert("Error al eliminar");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#030304] text-neutral-100 flex flex-col md:flex-row bg-grid-pattern selection:bg-white selection:text-black">
+      {/* Sidebar */}
+      <aside className="w-full md:w-64 bg-[#08080a] border-r border-white/10 p-6 flex flex-col justify-between shrink-0">
+        <div>
+          <div className="flex items-center gap-2 mb-8">
+            <Link to="/" className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition">
+              <ArrowLeft className="w-3.5 h-3.5" /> Volver a la web
+            </Link>
+          </div>
+
+          <h2 className="text-lg font-bold text-white mb-6 tracking-tight flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center shadow-sm">◈</span>
+            Admin Panel
+          </h2>
+
+          <nav className="space-y-1 text-xs font-medium">
+            <button
+              onClick={() => setTabActiva("perfil")}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-full transition cursor-pointer ${
+                tabActiva === "perfil"
+                  ? "bg-white text-black font-semibold shadow-md shadow-white/10"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <User className="w-4 h-4" /> Perfil
+            </button>
+            <button
+              onClick={() => setTabActiva("proyectos")}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-full transition cursor-pointer ${
+                tabActiva === "proyectos"
+                  ? "bg-white text-black font-semibold shadow-md shadow-white/10"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <Sparkles className="w-4 h-4" /> Proyectos ({proyectos.length})
+            </button>
+            <button
+              onClick={() => setTabActiva("experiencia")}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-full transition cursor-pointer ${
+                tabActiva === "experiencia"
+                  ? "bg-white text-black font-semibold shadow-md shadow-white/10"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <Briefcase className="w-4 h-4" /> Experiencia ({experiencias.length})
+            </button>
+            <button
+              onClick={() => setTabActiva("educacion")}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-full transition cursor-pointer ${
+                tabActiva === "educacion"
+                  ? "bg-white text-black font-semibold shadow-md shadow-white/10"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <GraduationCap className="w-4 h-4" /> Educación ({educacion.length})
+            </button>
+            <button
+              onClick={() => setTabActiva("skills")}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 rounded-full transition cursor-pointer ${
+                tabActiva === "skills"
+                  ? "bg-white text-black font-semibold shadow-md shadow-white/10"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <Code2 className="w-4 h-4" /> Skills ({skills.length})
+            </button>
+          </nav>
+        </div>
+
+        <button
+          onClick={logout}
+          className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" /> Cerrar sesión
+        </button>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 p-6 md:p-10 max-w-5xl overflow-y-auto">
+        {/* Banner de Éxito */}
+        {mensajeExito && (
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-bounce">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{mensajeExito}</span>
+          </div>
+        )}
+
+        {/* Banner de Advertencia de Imagen */}
+        {advertenciaImagen && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs flex items-start gap-2.5 shadow-lg shadow-amber-500/10">
+            <span className="text-base leading-none">⚠️</span>
+            <div className="flex-1">
+              <strong className="font-semibold block mb-0.5">Control de Imagen:</strong>
+              <p className="text-amber-200/90 leading-relaxed">{advertenciaImagen}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB 1: PERFIL
+        ======================================================== */}
+        {tabActiva === "perfil" && (
+          <div>
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-white tracking-tight">Editar Perfil</h3>
+              <p className="text-xs text-neutral-400 mt-1">Modificá tus datos personales y enlaces que se muestran en el Hero.</p>
+            </div>
+
+            <form onSubmit={handleGuardarPerfil} className="glass-panel rounded-3xl p-6 sm:p-8 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Nombre Completo</label>
+                  <input
+                    type="text"
+                    value={perfil.nombre || ""}
+                    onChange={(e) => setPerfil({ ...perfil, nombre: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Título Profesional</label>
+                  <input
+                    type="text"
+                    value={perfil.titulo || ""}
+                    onChange={(e) => setPerfil({ ...perfil, titulo: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Foto de Perfil (URL o Archivo)</label>
+                <input
+                  type="text"
+                  value={perfil.fotoUrl || ""}
+                  onChange={(e) => setPerfil({ ...perfil, fotoUrl: e.target.value })}
+                  placeholder="https://... o seleccioná una foto abajo"
+                  className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 mb-2 transition"
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      try {
+                        const base64 = await procesarYComprimirImagen(file);
+                        setPerfil({ ...perfil, fotoUrl: base64 });
+                      } catch (err) {
+                        alert("Error procesando foto: " + err.message);
+                      }
+                    }
+                  }}
+                  className="text-xs text-neutral-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer"
+                />
+                {perfil.fotoUrl && (
+                  <div className="mt-3 relative w-16 h-16 rounded-full overflow-hidden border border-white/20 shadow-md">
+                    <img src={perfil.fotoUrl} alt="Preview Perfil" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Biografía Corta</label>
+                <textarea
+                  rows={3}
+                  value={perfil.bio || ""}
+                  onChange={(e) => setPerfil({ ...perfil, bio: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Email de Contacto</label>
+                  <input
+                    type="email"
+                    value={perfil.redes?.email || ""}
+                    onChange={(e) => setPerfil({ ...perfil, redes: { ...perfil.redes, email: e.target.value } })}
+                    className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">URL GitHub</label>
+                  <input
+                    type="text"
+                    value={perfil.redes?.github || ""}
+                    onChange={(e) => setPerfil({ ...perfil, redes: { ...perfil.redes, github: e.target.value } })}
+                    className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">URL LinkedIn</label>
+                  <input
+                    type="text"
+                    value={perfil.redes?.linkedin || ""}
+                    onChange={(e) => setPerfil({ ...perfil, redes: { ...perfil.redes, linkedin: e.target.value } })}
+                    className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 flex items-center gap-2 cursor-pointer"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB 2: PROYECTOS (Edición Desplegable In-Line)
+        ======================================================== */}
+        {tabActiva === "proyectos" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-white tracking-tight">Gestión de Proyectos</h3>
+                <p className="text-xs text-neutral-400 mt-1">Crea, edita y destaca los proyectos de tu portfolio.</p>
+              </div>
+              <button
+                onClick={() => setMostrarCrearProyecto(!mostrarCrearProyecto)}
+                className="px-4 py-2 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 flex items-center gap-1.5 cursor-pointer"
+              >
+                {mostrarCrearProyecto ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {mostrarCrearProyecto ? "Cerrar" : "Nuevo Proyecto"}
+              </button>
+            </div>
+
+            {/* Formulario Crear Nuevo Proyecto (Desplegable Smooth Accordion) */}
+            <div className={`smooth-accordion ${mostrarCrearProyecto ? "is-open" : ""}`}>
+              <div className="smooth-accordion-content">
+                <form onSubmit={handleCrearProyecto} className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 mb-6">
+                  <h4 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-white" /> Crear Nuevo Proyecto
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Título del Proyecto</label>
+                      <input
+                        type="text"
+                        required
+                        value={nuevoProyecto.titulo}
+                        onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, titulo: e.target.value })}
+                        placeholder="Mi Aplicación Full Stack"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Tecnologías (separadas por coma)</label>
+                      <input
+                        type="text"
+                        value={nuevoProyecto.tecnologias}
+                        onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, tecnologias: e.target.value })}
+                        placeholder="React, Node.js, Express, MongoDB"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Descripción</label>
+                    <textarea
+                      rows={2}
+                      required
+                      value={nuevoProyecto.descripcion}
+                      onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, descripcion: e.target.value })}
+                      placeholder="Descripción detallada de la arquitectura y funciones..."
+                      className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Imagen (URL o Archivo)</label>
+                      <input
+                        type="text"
+                        value={nuevoProyecto.imagenUrl}
+                        onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, imagenUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 mb-2 transition"
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            try {
+                              const base64 = await procesarYComprimirImagen(file);
+                              setNuevoProyecto({ ...nuevoProyecto, imagenUrl: base64 });
+                            } catch (err) {
+                              alert("Error procesando imagen: " + err.message);
+                            }
+                          }
+                        }}
+                        className="text-xs text-neutral-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer"
+                      />
+                      {nuevoProyecto.imagenUrl && (
+                        <div className="mt-2 relative w-24 h-16 rounded-xl overflow-hidden border border-white/20">
+                          <img src={nuevoProyecto.imagenUrl} alt="Preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Link Repo (GitHub)</label>
+                      <input
+                        type="text"
+                        value={nuevoProyecto.repoUrl}
+                        onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, repoUrl: e.target.value })}
+                        placeholder="https://github.com/..."
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Link Demo (Vercel/Web)</label>
+                      <input
+                        type="text"
+                        value={nuevoProyecto.demoUrl}
+                        onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, demoUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="destacadoNuevo"
+                      checked={nuevoProyecto.destacado}
+                      onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, destacado: e.target.checked })}
+                      className="w-4 h-4 rounded accent-white cursor-pointer"
+                    />
+                    <label htmlFor="destacadoNuevo" className="text-xs text-neutral-300 cursor-pointer">
+                      Mostrar como Proyecto Destacado ★
+                    </label>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 cursor-pointer"
+                    >
+                      Guardar Proyecto
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Lista de Proyectos con Edición Desplegable In-Line Smooth Accordion */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                Proyectos Actuales ({proyectos.length})
+              </h4>
+
+              {proyectos.map((p) => {
+                const estaEditando = editandoProyectoId === p._id;
+
+                return (
+                  <div
+                    key={p._id}
+                    className="glass-panel rounded-3xl overflow-hidden transition-all duration-300"
+                  >
+                    {/* Header de la tarjeta */}
+                    <div className="p-5 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        {p.imagenUrl && (
+                          <div className="w-16 h-12 rounded-xl overflow-hidden bg-black shrink-0 border border-white/10">
+                            <img src={p.imagenUrl} alt={p.titulo} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <h5 className="font-bold text-sm text-white truncate flex items-center gap-2">
+                            {p.titulo}
+                            {p.destacado && <span className="text-[10px] text-amber-300 font-normal">★ Destacado</span>}
+                          </h5>
+                          <p className="text-xs text-neutral-400 truncate max-w-md">{p.descripcion}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => handleIniciarEditarProyecto(p)}
+                          title="Editar in-line"
+                          className={`p-2 rounded-full transition cursor-pointer ${
+                            estaEditando
+                              ? "bg-white text-black"
+                              : "text-neutral-400 hover:text-white hover:bg-white/10"
+                          }`}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEliminarProyecto(p._id)}
+                          title="Eliminar"
+                          className="p-2 rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Formulario Desplegable In-Line con Smooth Accordion */}
+                    <div className={`smooth-accordion ${estaEditando ? "is-open" : ""}`}>
+                      <div className="smooth-accordion-content">
+                        <div className="border-t border-white/10 p-6 bg-black/40 space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Título</label>
+                              <input
+                                type="text"
+                                value={formEditProyecto.titulo || ""}
+                                onChange={(e) => setFormEditProyecto({ ...formEditProyecto, titulo: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white/30"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Tecnologías</label>
+                              <input
+                                type="text"
+                                value={formEditProyecto.tecnologias || ""}
+                                onChange={(e) => setFormEditProyecto({ ...formEditProyecto, tecnologias: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white/30"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Descripción</label>
+                            <textarea
+                              rows={2}
+                              value={formEditProyecto.descripcion || ""}
+                              onChange={(e) => setFormEditProyecto({ ...formEditProyecto, descripcion: e.target.value })}
+                              className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white/30"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Imagen (URL o Archivo)</label>
+                              <input
+                                type="text"
+                                value={formEditProyecto.imagenUrl || ""}
+                                onChange={(e) => setFormEditProyecto({ ...formEditProyecto, imagenUrl: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none mb-2"
+                              />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                  const file = e.target.files[0];
+                                  if (file) {
+                                    try {
+                                      const base64 = await procesarYComprimirImagen(file);
+                                      setFormEditProyecto({ ...formEditProyecto, imagenUrl: base64 });
+                                    } catch (err) {
+                                      alert("Error procesando imagen: " + err.message);
+                                    }
+                                  }
+                                }}
+                                className="text-xs text-neutral-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer"
+                              />
+                              {formEditProyecto.imagenUrl && (
+                                <div className="mt-2 relative w-20 h-14 rounded-lg overflow-hidden border border-white/20">
+                                  <img src={formEditProyecto.imagenUrl} alt="Preview" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Link Repo (GitHub)</label>
+                              <input
+                                type="text"
+                                value={formEditProyecto.repoUrl || ""}
+                                onChange={(e) => setFormEditProyecto({ ...formEditProyecto, repoUrl: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Link Demo (Vercel)</label>
+                              <input
+                                type="text"
+                                value={formEditProyecto.demoUrl || ""}
+                                onChange={(e) => setFormEditProyecto({ ...formEditProyecto, demoUrl: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`destacado_${p._id}`}
+                              checked={formEditProyecto.destacado || false}
+                              onChange={(e) => setFormEditProyecto({ ...formEditProyecto, destacado: e.target.checked })}
+                              className="w-4 h-4 rounded accent-white cursor-pointer"
+                            />
+                            <label htmlFor={`destacado_${p._id}`} className="text-xs text-neutral-300 cursor-pointer">
+                              Mostrar como Proyecto Destacado ★
+                            </label>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleGuardarEdicionProyecto(p._id)}
+                              className="px-5 py-2 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition shadow-md shadow-white/10 cursor-pointer"
+                            >
+                              Guardar Cambios
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditandoProyectoId(null)}
+                              className="px-4 py-2 rounded-full bg-white/[0.05] hover:bg-white/10 text-neutral-300 text-xs transition border border-white/10 cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB 3: EXPERIENCIA (Edición Desplegable In-Line Smooth)
+        ======================================================== */}
+        {tabActiva === "experiencia" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-white tracking-tight">Experiencia Laboral</h3>
+                <p className="text-xs text-neutral-400 mt-1">Gestioná tu historial y roles profesionales.</p>
+              </div>
+              <button
+                onClick={() => setMostrarCrearExp(!mostrarCrearExp)}
+                className="px-4 py-2 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 flex items-center gap-1.5 cursor-pointer"
+              >
+                {mostrarCrearExp ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {mostrarCrearExp ? "Cerrar" : "Nueva Experiencia"}
+              </button>
+            </div>
+
+            {/* Formulario Crear Nueva Experiencia (Smooth Accordion) */}
+            <div className={`smooth-accordion ${mostrarCrearExp ? "is-open" : ""}`}>
+              <div className="smooth-accordion-content">
+                <form onSubmit={handleCrearExperiencia} className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 mb-6">
+                  <h4 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-white" /> Agregar Experiencia
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Empresa</label>
+                      <input
+                        type="text"
+                        required
+                        value={nuevaExp.empresa}
+                        onChange={(e) => setNuevaExp({ ...nuevaExp, empresa: e.target.value })}
+                        placeholder="Empresa o Estudio"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Puesto / Rol</label>
+                      <input
+                        type="text"
+                        required
+                        value={nuevaExp.puesto}
+                        onChange={(e) => setNuevaExp({ ...nuevaExp, puesto: e.target.value })}
+                        placeholder="Full Stack Developer"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Fecha Inicio</label>
+                      <input
+                        type="text"
+                        required
+                        value={nuevaExp.fechaInicio}
+                        onChange={(e) => setNuevaExp({ ...nuevaExp, fechaInicio: e.target.value })}
+                        placeholder="2023 o Ene 2023"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Fecha Fin</label>
+                      <input
+                        type="text"
+                        disabled={nuevaExp.actual}
+                        value={nuevaExp.fechaFin}
+                        onChange={(e) => setNuevaExp({ ...nuevaExp, fechaFin: e.target.value })}
+                        placeholder="2024 o Presente"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 disabled:opacity-40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="actualExp"
+                      checked={nuevaExp.actual}
+                      onChange={(e) => setNuevaExp({ ...nuevaExp, actual: e.target.checked })}
+                      className="w-4 h-4 rounded accent-white cursor-pointer"
+                    />
+                    <label htmlFor="actualExp" className="text-xs text-neutral-300 cursor-pointer">Trabajo actual</label>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Descripción de Responsabilidades</label>
+                    <textarea
+                      rows={3}
+                      value={nuevaExp.descripcion}
+                      onChange={(e) => setNuevaExp({ ...nuevaExp, descripcion: e.target.value })}
+                      placeholder="Desarrollo de microservicios, optimización de endpoints..."
+                      className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 cursor-pointer"
+                    >
+                      Guardar Experiencia
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Lista de Experiencias con Edición In-Line Smooth Accordion */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                Experiencias Registradas ({experiencias.length})
+              </h4>
+
+              {experiencias.map((exp) => {
+                const estaEditando = editandoExpId === exp._id;
+
+                return (
+                  <div
+                    key={exp._id}
+                    className="glass-panel rounded-3xl overflow-hidden transition-all duration-300"
+                  >
+                    <div className="p-5 flex items-center justify-between gap-4">
+                      <div>
+                        <h5 className="font-bold text-sm text-white">{exp.puesto}</h5>
+                        <p className="text-xs text-neutral-400">
+                          {exp.empresa} • {exp.fechaInicio} {exp.actual ? "— Presente" : exp.fechaFin ? `— ${exp.fechaFin}` : ""}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => handleIniciarEditarExp(exp)}
+                          title="Editar in-line"
+                          className={`p-2 rounded-full transition cursor-pointer ${
+                            estaEditando
+                              ? "bg-white text-black"
+                              : "text-neutral-400 hover:text-white hover:bg-white/10"
+                          }`}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEliminarExperiencia(exp._id)}
+                          title="Eliminar"
+                          className="p-2 rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* In-Line Edit Form Smooth Accordion */}
+                    <div className={`smooth-accordion ${estaEditando ? "is-open" : ""}`}>
+                      <div className="smooth-accordion-content">
+                        <div className="border-t border-white/10 p-6 bg-black/40 space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Empresa</label>
+                              <input
+                                type="text"
+                                value={formEditExp.empresa || ""}
+                                onChange={(e) => setFormEditExp({ ...formEditExp, empresa: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Puesto</label>
+                              <input
+                                type="text"
+                                value={formEditExp.puesto || ""}
+                                onChange={(e) => setFormEditExp({ ...formEditExp, puesto: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Fecha Inicio</label>
+                              <input
+                                type="text"
+                                value={formEditExp.fechaInicio || ""}
+                                onChange={(e) => setFormEditExp({ ...formEditExp, fechaInicio: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Fecha Fin</label>
+                              <input
+                                type="text"
+                                disabled={formEditExp.actual}
+                                value={formEditExp.fechaFin || ""}
+                                onChange={(e) => setFormEditExp({ ...formEditExp, fechaFin: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none disabled:opacity-40"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`actual_${exp._id}`}
+                              checked={formEditExp.actual || false}
+                              onChange={(e) => setFormEditExp({ ...formEditExp, actual: e.target.checked })}
+                              className="w-4 h-4 rounded accent-white cursor-pointer"
+                            />
+                            <label htmlFor={`actual_${exp._id}`} className="text-xs text-neutral-300 cursor-pointer">Trabajo actual</label>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Descripción</label>
+                            <textarea
+                              rows={3}
+                              value={formEditExp.descripcion || ""}
+                              onChange={(e) => setFormEditExp({ ...formEditExp, descripcion: e.target.value })}
+                              className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleGuardarEdicionExp(exp._id)}
+                              className="px-5 py-2 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition shadow-md shadow-white/10 cursor-pointer"
+                            >
+                              Guardar Cambios
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditandoExpId(null)}
+                              className="px-4 py-2 rounded-full bg-white/[0.05] hover:bg-white/10 text-neutral-300 text-xs transition border border-white/10 cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB 4: EDUCACIÓN (Edición Desplegable In-Line Smooth)
+        ======================================================== */}
+        {tabActiva === "educacion" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-white tracking-tight">Educación y Certificaciones</h3>
+                <p className="text-xs text-neutral-400 mt-1">Registrá tus títulos, carreras y cursos.</p>
+              </div>
+              <button
+                onClick={() => setMostrarCrearEdu(!mostrarCrearEdu)}
+                className="px-4 py-2 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 flex items-center gap-1.5 cursor-pointer"
+              >
+                {mostrarCrearEdu ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {mostrarCrearEdu ? "Cerrar" : "Nueva Educación"}
+              </button>
+            </div>
+
+            {/* Formulario Crear Nueva Educación (Smooth Accordion) */}
+            <div className={`smooth-accordion ${mostrarCrearEdu ? "is-open" : ""}`}>
+              <div className="smooth-accordion-content">
+                <form onSubmit={handleCrearEducacion} className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 mb-6">
+                  <h4 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-white" /> Agregar Educación
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Institución / Universidad</label>
+                      <input
+                        type="text"
+                        required
+                        value={nuevaEdu.institucion}
+                        onChange={(e) => setNuevaEdu({ ...nuevaEdu, institucion: e.target.value })}
+                        placeholder="Universidad Tecnológica Nacional"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Título Obtenido</label>
+                      <input
+                        type="text"
+                        required
+                        value={nuevaEdu.titulo}
+                        onChange={(e) => setNuevaEdu({ ...nuevaEdu, titulo: e.target.value })}
+                        placeholder="Tecnicatura en Programación"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Año de Inicio</label>
+                      <input
+                        type="text"
+                        required
+                        value={nuevaEdu.fechaInicio}
+                        onChange={(e) => setNuevaEdu({ ...nuevaEdu, fechaInicio: e.target.value })}
+                        placeholder="2021"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Año de Fin / Graduación</label>
+                      <input
+                        type="text"
+                        value={nuevaEdu.fechaFin}
+                        onChange={(e) => setNuevaEdu({ ...nuevaEdu, fechaFin: e.target.value })}
+                        placeholder="2024"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 cursor-pointer"
+                    >
+                      Guardar Educación
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Lista de Educación con Edición In-Line Smooth Accordion */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                Títulos Registrados ({educacion.length})
+              </h4>
+
+              {educacion.map((edu) => {
+                const estaEditando = editandoEduId === edu._id;
+
+                return (
+                  <div
+                    key={edu._id}
+                    className="glass-panel rounded-3xl overflow-hidden transition-all duration-300"
+                  >
+                    <div className="p-5 flex items-center justify-between gap-4">
+                      <div>
+                        <h5 className="font-bold text-sm text-white">{edu.titulo}</h5>
+                        <p className="text-xs text-neutral-400">
+                          {edu.institucion} • {edu.fechaInicio} {edu.fechaFin ? `— ${edu.fechaFin}` : ""}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => handleIniciarEditarEdu(edu)}
+                          title="Editar in-line"
+                          className={`p-2 rounded-full transition cursor-pointer ${
+                            estaEditando
+                              ? "bg-white text-black"
+                              : "text-neutral-400 hover:text-white hover:bg-white/10"
+                          }`}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEliminarEducacion(edu._id)}
+                          title="Eliminar"
+                          className="p-2 rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* In-Line Edit Form Smooth Accordion */}
+                    <div className={`smooth-accordion ${estaEditando ? "is-open" : ""}`}>
+                      <div className="smooth-accordion-content">
+                        <div className="border-t border-white/10 p-6 bg-black/40 space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Institución</label>
+                              <input
+                                type="text"
+                                value={formEditEdu.institucion || ""}
+                                onChange={(e) => setFormEditEdu({ ...formEditEdu, institucion: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Título</label>
+                              <input
+                                type="text"
+                                value={formEditEdu.titulo || ""}
+                                onChange={(e) => setFormEditEdu({ ...formEditEdu, titulo: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Año Inicio</label>
+                              <input
+                                type="text"
+                                value={formEditEdu.fechaInicio || ""}
+                                onChange={(e) => setFormEditEdu({ ...formEditEdu, fechaInicio: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Año Fin</label>
+                              <input
+                                type="text"
+                                value={formEditEdu.fechaFin || ""}
+                                onChange={(e) => setFormEditEdu({ ...formEditEdu, fechaFin: e.target.value })}
+                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleGuardarEdicionEdu(edu._id)}
+                              className="px-5 py-2 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition shadow-md shadow-white/10 cursor-pointer"
+                            >
+                              Guardar Cambios
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditandoEduId(null)}
+                              className="px-4 py-2 rounded-full bg-white/[0.05] hover:bg-white/10 text-neutral-300 text-xs transition border border-white/10 cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB 5: SKILLS (Edición Desplegable In-Line Smooth)
+        ======================================================== */}
+        {tabActiva === "skills" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-white tracking-tight">Habilidades Técnicas</h3>
+                <p className="text-xs text-neutral-400 mt-1">Gestioná tus tecnologías y niveles de dominio.</p>
+              </div>
+              <button
+                onClick={() => setMostrarCrearSkill(!mostrarCrearSkill)}
+                className="px-4 py-2 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 flex items-center gap-1.5 cursor-pointer"
+              >
+                {mostrarCrearSkill ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {mostrarCrearSkill ? "Cerrar" : "Nueva Skill"}
+              </button>
+            </div>
+
+            {/* Formulario Crear Nueva Skill (Smooth Accordion) */}
+            <div className={`smooth-accordion ${mostrarCrearSkill ? "is-open" : ""}`}>
+              <div className="smooth-accordion-content">
+                <form onSubmit={handleCrearSkill} className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 mb-6">
+                  <h4 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-white" /> Agregar Habilidad
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Nombre</label>
+                      <input
+                        type="text"
+                        required
+                        value={nuevaSkill.nombre}
+                        onChange={(e) => setNuevaSkill({ ...nuevaSkill, nombre: e.target.value })}
+                        placeholder="React, Docker, Node.js"
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Categoría</label>
+                      <select
+                        value={nuevaSkill.categoria}
+                        onChange={(e) => setNuevaSkill({ ...nuevaSkill, categoria: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white focus:outline-none cursor-pointer"
+                      >
+                        <option value="Frontend" className="bg-neutral-900 text-white">Frontend</option>
+                        <option value="Backend" className="bg-neutral-900 text-white">Backend</option>
+                        <option value="Base de Datos" className="bg-neutral-900 text-white">Base de Datos</option>
+                        <option value="DevOps & Herramientas" className="bg-neutral-900 text-white">DevOps & Herramientas</option>
+                        <option value="Videojuegos & Motores" className="bg-neutral-900 text-white">Videojuegos & Motores</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Nivel</label>
+                      <select
+                        value={nuevaSkill.nivel}
+                        onChange={(e) => setNuevaSkill({ ...nuevaSkill, nivel: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white focus:outline-none cursor-pointer"
+                      >
+                        <option value="Básico" className="bg-neutral-900 text-white">Básico</option>
+                        <option value="Intermedio" className="bg-neutral-900 text-white">Intermedio</option>
+                        <option value="Avanzado" className="bg-neutral-900 text-white">Avanzado</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition-all shadow-md shadow-white/10 cursor-pointer"
+                    >
+                      Guardar Skill
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Lista de Skills con Edición In-Line Smooth Accordion */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {skills.map((sk) => {
+                const estaEditando = editandoSkillId === sk._id;
+
+                return (
+                  <div
+                    key={sk._id}
+                    className="glass-panel rounded-3xl overflow-hidden transition-all duration-300"
+                  >
+                    <div className="p-4 flex items-center justify-between gap-3">
+                      <div>
+                        <h5 className="font-bold text-sm text-white">{sk.nombre}</h5>
+                        <p className="text-[11px] text-neutral-400">{sk.categoria} • {sk.nivel}</p>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => handleIniciarEditarSkill(sk)}
+                          title="Editar in-line"
+                          className={`p-1.5 rounded-full transition cursor-pointer ${
+                            estaEditando
+                              ? "bg-white text-black"
+                              : "text-neutral-400 hover:text-white hover:bg-white/10"
+                          }`}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleEliminarSkill(sk._id)}
+                          title="Eliminar"
+                          className="p-1.5 rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* In-Line Edit Form Smooth Accordion */}
+                    <div className={`smooth-accordion ${estaEditando ? "is-open" : ""}`}>
+                      <div className="smooth-accordion-content">
+                        <div className="border-t border-white/10 p-4 bg-black/40 space-y-3">
+                          <div>
+                            <label className="block text-[10px] font-semibold text-neutral-400 uppercase mb-1">Nombre</label>
+                            <input
+                              type="text"
+                              value={formEditSkill.nombre || ""}
+                              onChange={(e) => setFormEditSkill({ ...formEditSkill, nombre: e.target.value })}
+                              className="w-full px-3 py-1.5 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-neutral-400 uppercase mb-1">Categoría</label>
+                              <select
+                                value={formEditSkill.categoria || "Frontend"}
+                                onChange={(e) => setFormEditSkill({ ...formEditSkill, categoria: e.target.value })}
+                                className="w-full px-2 py-1.5 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
+                              >
+                                <option value="Frontend" className="bg-neutral-900 text-white">Frontend</option>
+                                <option value="Backend" className="bg-neutral-900 text-white">Backend</option>
+                                <option value="Base de Datos" className="bg-neutral-900 text-white">Base de Datos</option>
+                                <option value="DevOps & Herramientas" className="bg-neutral-900 text-white">DevOps</option>
+                                <option value="Videojuegos & Motores" className="bg-neutral-900 text-white">Videojuegos</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-neutral-400 uppercase mb-1">Nivel</label>
+                              <select
+                                value={formEditSkill.nivel || "Intermedio"}
+                                onChange={(e) => setFormEditSkill({ ...formEditSkill, nivel: e.target.value })}
+                                className="w-full px-2 py-1.5 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
+                              >
+                                <option value="Básico" className="bg-neutral-900 text-white">Básico</option>
+                                <option value="Intermedio" className="bg-neutral-900 text-white">Intermedio</option>
+                                <option value="Avanzado" className="bg-neutral-900 text-white">Avanzado</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => handleGuardarEdicionSkill(sk._id)}
+                              className="px-4 py-1.5 rounded-full bg-white text-black hover:bg-neutral-200 font-semibold text-xs transition shadow-sm cursor-pointer"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditandoSkillId(null)}
+                              className="px-3 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/10 text-neutral-300 text-xs transition border border-white/10 cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

@@ -1,0 +1,40 @@
+# ==========================================
+# IGNORAR CARPETAS DE EJERCICIOS Y CURSO
+# ==========================================
+_build/
+assets/
+deploy/
+fundamentos/
+proyecto1-portfolio/
+proyecto2-tienda-peliculas/
+glosario.html
+index.html
+
+# ==========================================
+# DEPENDENCIAS Y BUILDS
+# ==========================================
+node_modules/
+*/node_modules/
+dist/
+*/dist/
+build/
+*/build/
+
+# ==========================================
+# VARIABLES DE ENTORNO Y SECRETOS (CRÍTICO)
+# ==========================================
+.env
+.env.local
+.env.*.local
+*.env
+*/.env
+
+# ==========================================
+# ARCHIVOS DE SISTEMA Y LOGS
+# ==========================================
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+.vscode/
+.idea/

@@ -1,0 +1,41 @@
+const express = require("express");
+const router = express.Router();
+const { body } = require("express-validator");
+const ctrl = require("../controllers/proyectos.controller");
+const requireAuth = require("../middlewares/requireAuth");
+const validar = require("../middlewares/validar");
+const upload = require("../middlewares/upload");
+
+// Rutas públicas
+router.get("/", ctrl.listar);
+router.get("/:id", ctrl.obtenerUno);
+
+// Rutas protegidas (Admin) con validaciones de express-validator
+router.post(
+  "/",
+  requireAuth,
+  [
+    body("titulo").notEmpty().withMessage("El título es obligatorio"),
+    body("descripcion").notEmpty().withMessage("La descripción es obligatoria"),
+  ],
+  validar,
+  ctrl.crear
+);
+
+router.put(
+  "/:id",
+  requireAuth,
+  [
+    body("titulo").optional().notEmpty().withMessage("El título no puede estar vacío"),
+  ],
+  validar,
+  ctrl.actualizar
+);
+
+router.patch("/:id/destacar", requireAuth, ctrl.destacar);
+router.delete("/:id", requireAuth, ctrl.eliminar);
+
+// Subida de imagen a Cloudinary/Multer
+router.post("/:id/imagen", requireAuth, upload.single("imagen"), ctrl.subirImagen);
+
+module.exports = router;
