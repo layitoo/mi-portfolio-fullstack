@@ -1,16 +1,4 @@
 # ==========================================
-# IGNORAR CARPETAS DE EJERCICIOS Y CURSO
-# ==========================================
-_build/
-assets/
-deploy/
-fundamentos/
-proyecto1-portfolio/
-proyecto2-tienda-peliculas/
-glosario.html
-index.html
-
-# ==========================================
 # DEPENDENCIAS Y BUILDS
 # ==========================================
 node_modules/
