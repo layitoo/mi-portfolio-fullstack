@@ -26,5 +26,6 @@ router.post(
 );
 
 router.get("/me", requireAuth, ctrl.perfil);
+router.get("/perfil", requireAuth, ctrl.perfil);
 
 module.exports = router;
