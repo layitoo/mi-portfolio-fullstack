@@ -18,8 +18,8 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-4 z-50 w-full px-4 flex justify-center">
-      <div className="rounded-full bg-[#0a0a0c]/85 backdrop-blur-xl border border-white/10 px-6 sm:px-8 h-14 flex items-center justify-between gap-6 sm:gap-10 shadow-2xl shadow-black/90 max-w-3xl w-full">
+    <header className="fixed top-4 left-0 right-0 z-50 w-full px-4 flex justify-center pointer-events-none">
+      <div className="pointer-events-auto rounded-full bg-[#0a0a0c]/80 backdrop-blur-xl border border-white/10 px-6 sm:px-8 h-14 flex items-center justify-between gap-6 sm:gap-10 shadow-2xl shadow-black/90 max-w-3xl w-full transition-all duration-300">
         {/* Brand / Logo (Smooth Scroll to top) */}
         <Link
           to="/"

@@ -23,7 +23,7 @@ export default function Hero({ perfil }) {
   const stack = ["React.js", "Node.js", "Express", "MongoDB", "Tailwind CSS"];
 
   return (
-    <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden">
+    <section className="relative pt-24 sm:pt-28 md:pt-32 pb-16 md:pb-24 overflow-hidden">
       {/* Floating 3D Chrome Stars */}
       <div className="hidden lg:block absolute top-12 right-[12%] animate-float pointer-events-none opacity-90 z-0" style={{ animationDelay: "-1s" }}>
         <ChromeStar size={85} className="drop-shadow-[0_15px_30px_rgba(255,255,255,0.25)]" />
