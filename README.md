@@ -1,92 +1,202 @@
-# 🌌 Portfolio Fullstack — Leandro Martin Lalanda
+# Portfolio Web Full Stack
 
-Un portfolio web fullstack moderno de alto rendimiento con estética **Dark Obsidian**, fondo procedural interactivo de **Cromo Líquido en Canvas**, y un **Panel de Administración** completo con autenticación JWT para gestionar proyectos, experiencia laboral, educación y habilidades técnicas en tiempo real.
-
----
-
-## ✨ Características Principales
-
-- **Diseño & UX Premium**:
-  - Estética *Dark Obsidian / Onyx* (`#030304`) con bordes especulares de vidrio (*Glassmorphism*).
-  - Fondo procedural interactivo en **HTML5 Canvas** con ondas 3D de cromo líquido metálico reactivas al scroll y movimiento del cursor.
-  - Estrellas cromadas 3D flotantes y badges metálicos.
-  - Navegación fluida (*Smooth Scrolling*) entre secciones.
-- **Panel de Administración (Admin Dashboard)**:
-  - Autenticación segura mediante **JWT** (JSON Web Tokens) y contraseñas hasheadas con **bcrypt**.
-  - Edición *in-line* fluida con animación suave tipo acordeón (*cubic-bezier ease-in-out*).
-  - Subida inteligente de imágenes con **compresión automática en Canvas** (optimiza imágenes pesadas de +10MB o +1080p evitando límites de MongoDB).
-  - CRUD completo de:
-    - 📂 **Proyectos**: título, descripción, tecnologías, enlaces a GitHub/Demo, e indicador de proyecto destacado.
-    - 💼 **Experiencia Laboral**: empresa, puesto, período de tiempo y descripción.
-    - 🎓 **Educación y Certificaciones**: institución, título y fechas.
-    - ⚡ **Habilidades Técnicas**: categorizadas por Frontend, Backend, etc.
-- **Arquitectura Fullstack**:
-  - **Frontend**: React 18, Vite, Tailwind CSS, Lucide React, HTML5 Canvas 2D.
-  - **Backend**: Node.js, Express, MongoDB Atlas (Mongoose/Driver Nativo), JWT, express-validator.
+Aplicacion web profesional disenada con arquitectura cliente-servidor desacoplada, estetica Dark Obsidian, renderizado procedural en Canvas 2D y un Panel de Administracion integral con autenticacion basada en JSON Web Tokens (JWT).
 
 ---
 
-## 🚀 Estructura del Repositorio
+## Tabla de Contenidos
+
+- [Descripcion General](#descripcion-general)
+- [Stack Tecnologico](#stack-tecnologico)
+- [Caracteristicas y Funcionalidades](#caracteristicas-y-funcionalidades)
+- [Estructura del Proyecto](#estructura-del-proyecto)
+- [Documentacion de la API REST](#documentacion-de-la-api-rest)
+- [Instalacion y Configuracion Local](#instalacion-y-configuracion-local)
+- [Variables de Entorno](#variables-de-entorno)
+- [Autor](#autor)
+
+---
+
+## Descripcion General
+
+El proyecto constituye una plataforma integral para la presentacion y gestion de proyectos de desarrollo de videojuegos, diseno 3D y soluciones web modernas. Incorpora un diseno visual avanzado inspirado en esteticas obsidian/metalicas, optimizado para alto rendimiento (60 FPS) y una experiencia de usuario fluida con animaciones vectoriales y navegacion reactiva.
+
+---
+
+## Stack Tecnologico
+
+### Frontend
+- **Framework / Bundler**: React 18, Vite
+- **Estilos**: Tailwind CSS, CSS3 personalizado (Grid Accordions, Mask Gradients, Glassmorphism)
+- **Renderizado Grafico**: HTML5 Canvas 2D Procedural
+- **Iconografia**: Lucide React
+- **Cliente HTTP**: Axios
+- **Enrutamiento**: React Router DOM v6
+
+### Backend
+- **Entorno de Ejecucion**: Node.js
+- **Framework Web**: Express.js
+- **Base de Datos**: MongoDB Atlas (Driver nativo y agregaciones)
+- **Autenticacion y Seguridad**: JSON Web Tokens (JWT), Bcrypt, Helmet, CORS
+- **Validacion de Datos**: Express-Validator
+- **Manejo de Archivos**: Multer
+
+---
+
+## Caracteristicas y Funcionalidades
+
+1. **Diseno Visual y UX**:
+   - Paleta de color base Onix (`#030304`) con bordes especulares y paneles con efecto de vidrio (*Glassmorphism*).
+   - Fondo procedural interactivo continuo implementado en Canvas 2D con efecto de profundidad espacial 3D (*Parallax Multicapa*).
+   - Barra de navegacion flotante fija con transicion suave de desplazamiento (*Smooth Scrolling*).
+
+2. **Panel de Administracion (CMS)**:
+   - Acceso autenticado mediante JWT y control de roles (Administrador y Editor).
+   - Edicion en linea (*In-line Accordion*) con transiciones suaves calculadas via `cubic-bezier`.
+   - Sistema de compresion y redimensionamiento automatico de imagenes en el cliente mediante Canvas (soporta archivos de alta resolucion evitando sobrecargar la base de datos).
+   - Reordenamiento manual de proyectos mediante Drag & Drop y controles incrementales, persistiendo el orden de forma atomica en MongoDB.
+
+3. **Optimizaciones y Modulos Avanzados**:
+   - **Filtro Dinamico por Tecnologia**: Filtrado en memoria y por parametros de consulta (`?tech=...`).
+   - **Registro de Visitas**: Contador de trafico atomico con proteccion de sesion para evitar conteos duplicados.
+   - **Formulario de Contacto**: Endpoint de recepcion de mensajes con validacion estricta y despacho de notificaciones por correo electronico.
+   - **Cache en Memoria**: Almacenamiento en memoria RAM con TTL de 5 minutos para endpoints de alta demanda e invalidacion automatica ante mutaciones.
+
+---
+
+## Estructura del Proyecto
 
 ```text
-├── portfolio-backend/      # Servidor API REST con Express y MongoDB
-│   ├── config/             # Conexión a la base de datos MongoDB Atlas
-│   ├── controllers/        # Controladores CRUD (perfil, proyectos, exp, edu, skills)
-│   ├── middlewares/        # Autenticación JWT y validadores
-│   ├── models/             # Modelos de datos
-│   ├── routes/             # Endpoints de la API
-│   └── server.js           # Punto de entrada del backend
+├── portfolio-backend/
+│   ├── config/             # Configuracion de base de datos y servicios externos
+│   ├── controllers/        # Controladores de logica de negocio (Auth, Perfil, Proyectos, etc.)
+│   ├── middlewares/        # Validaciones, autenticacion JWT y control de roles
+│   ├── models/             # Modelos de acceso a datos en MongoDB
+│   ├── routes/             # Definicion de rutas y endpoints de la API
+│   ├── services/           # Servicios auxiliares (Email, logica de negocio)
+│   ├── crear-admin.js      # Script de inicializacion de usuarios y roles
+│   └── server.js           # Punto de entrada de la aplicacion Express
 │
-├── portfolio-frontend/     # Aplicación Cliente SPA en React + Vite
+├── portfolio-frontend/
 │   ├── src/
-│   │   ├── components/     # Componentes (Canvas, Navbar, Hero, ProjectCard, Timeline, etc.)
-│   │   ├── context/        # AuthContext para sesión de administrador
-│   │   ├── pages/          # Home pública y Admin Dashboard / Login
-│   │   ├── services/       # Clientes Axios para comunicación con la API
-│   │   └── index.css       # Sistema de diseño Obsidian
-│   └── package.json
+│   │   ├── components/     # Componentes reutilizables (Canvas, Navbar, Hero, etc.)
+│   │   ├── context/        # Contexto global de autenticacion
+│   │   ├── pages/          # Vistas principales (Home, AdminDashboard, Login)
+│   │   ├── services/       # Clientes HTTP para consumo de la API
+│   │   └── index.css       # Tokens de diseno, animaciones y utilidades
+│   ├── index.html
+│   └── vite.config.js
 │
-├── .gitignore              # Ignora node_modules, .env y archivos temporales
-└── README.md               # Documentación del proyecto
+├── .gitignore
+└── README.md
 ```
 
 ---
 
-## 🛠️ Instalación y Ejecución Local
+## Documentacion de la API REST
+
+Base URL: `http://localhost:4000/api`
+
+### Autenticacion
+| Metodo | Endpoint | Acceso | Descripcion |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/login` | Publico | Inicio de sesion (Devuelve token JWT y datos de usuario) |
+| `POST` | `/api/auth/registro` | Publico | Registro de nuevas cuentas de usuario |
+| `GET` | `/api/auth/perfil` | Autenticado | Obtiene la informacion del usuario en sesion |
+
+### Perfil
+| Metodo | Endpoint | Acceso | Descripcion |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/perfil` | Publico | Obtiene informacion del perfil (Con cache en memoria) |
+| `PUT` | `/api/perfil` | Autenticado | Actualiza datos del perfil e invalida la cache |
+
+### Proyectos
+| Metodo | Endpoint | Acceso | Descripcion |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/proyectos` | Publico | Lista todos los proyectos ordenados |
+| `GET` | `/api/proyectos?tech=React` | Publico | Filtra proyectos por coincidencia de tecnologia |
+| `GET` | `/api/proyectos/:id` | Publico | Obtiene un proyecto especifico por su identificador |
+| `POST` | `/api/proyectos` | Autenticado | Crea un nuevo proyecto |
+| `PUT` | `/api/proyectos/reordenar` | Autenticado | Actualiza el orden numerico de proyectos en lote |
+| `PUT` | `/api/proyectos/:id` | Autenticado | Modifica los datos de un proyecto existente |
+| `PATCH` | `/api/proyectos/:id/destacar` | Autenticado | Alterna el estado destacado de un proyecto |
+| `DELETE` | `/api/proyectos/:id` | Solo Admin | Elimina un proyecto de la base de datos |
+
+### Experiencia Laboral
+| Metodo | Endpoint | Acceso | Descripcion |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/experiencia` | Publico | Lista el historial de experiencia laboral |
+| `POST` | `/api/experiencia` | Autenticado | Registra una nueva experiencia |
+| `PUT` | `/api/experiencia/:id` | Autenticado | Modifica una experiencia existente |
+| `DELETE` | `/api/experiencia/:id` | Solo Admin | Elimina un registro de experiencia |
+
+### Educacion
+| Metodo | Endpoint | Acceso | Descripcion |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/educacion` | Publico | Lista los registros academicos y certificaciones |
+| `POST` | `/api/educacion` | Autenticado | Registra un nuevo titulo o certificacion |
+| `PUT` | `/api/educacion/:id` | Autenticado | Modifica un registro de educacion |
+| `DELETE` | `/api/educacion/:id` | Solo Admin | Elimina un registro academico |
+
+### Habilidades Tecnicas
+| Metodo | Endpoint | Acceso | Descripcion |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/skills` | Publico | Lista todas las habilidades tecnicas registradas |
+| `POST` | `/api/skills` | Autenticado | Registra una nueva habilidad |
+| `PUT` | `/api/skills/:id` | Autenticado | Modifica los datos de una habilidad |
+| `DELETE` | `/api/skills/:id` | Solo Admin | Elimina una habilidad |
+
+### Metricas y Contacto
+| Metodo | Endpoint | Acceso | Descripcion |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/visitas` | Publico | Incrementa y retorna el contador de visitas |
+| `GET` | `/api/visitas` | Publico | Consulta el total de visitas registradas |
+| `POST` | `/api/contacto` | Publico | Procesa y envia mensajes recibidos via formulario |
+
+---
+
+## Instalacion y Configuracion Local
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/TU_USUARIO/TU_REPOSITORIO.git
-cd TU_REPOSITORIO
+git clone https://github.com/layitoo/mi-portfolio-fullstack.git
+cd mi-portfolio-fullstack
 ```
 
-### 2. Configurar y Levantar el Backend
+### 2. Configuracion del Backend
 ```bash
 cd portfolio-backend
 npm install
-
-# Crear archivo .env en portfolio-backend con tus variables:
-# PORT=4000
-# MONGO_URI=mongodb+srv://...
-# JWT_SECRET=tu_clave_secreta
-
 npm run dev
 ```
-El servidor backend se iniciará en `http://localhost:4000`.
 
-### 3. Configurar y Levantar el Frontend
-En otra terminal:
+### 3. Configuracion del Frontend
+En una terminal independiente:
 ```bash
 cd portfolio-frontend
 npm install
 npm run dev
 ```
-La aplicación cliente se abrirá en `http://localhost:5173`.
 
 ---
 
-## 👤 Autor
+## Variables de Entorno
+
+Crear un archivo `.env` dentro del directorio `portfolio-backend/` con los siguientes parametros:
+
+```env
+PORT=4000
+MONGO_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/Portfolio?retryWrites=true&w=majority
+JWT_SECRET=tu_clave_secreta_jwt
+FRONTEND_URL=http://localhost:5173
+ADMIN_EMAIL=lalandaleandro@gmail.com
+```
+
+---
+
+## Autor
 
 **Leandro Martin Lalanda**  
-- **Rol**: Programador de videojuegos & Desarrollador Web Full Stack  
-- **Email**: `lalandaleandro@gmail.com`
+- Especialidad: Programador de Videojuegos & Desarrollador Web Full Stack  
+- Contacto: `lalandaleandro@gmail.com`  
+- Repositorio: [https://github.com/layitoo/mi-portfolio-fullstack](https://github.com/layitoo/mi-portfolio-fullstack)
