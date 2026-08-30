@@ -9,6 +9,7 @@ import { incrementarVisitas, obtenerVisitas } from "../services/visitas.service"
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
 import ProjectCard from "../components/ProjectCard";
+import ProjectModal from "../components/ProjectModal";
 import { ExperienceTimeline, EducationTimeline } from "../components/Timeline";
 import SkillsGrid from "../components/SkillsGrid";
 import ContactSection from "../components/ContactSection";
@@ -24,6 +25,7 @@ export default function Home() {
   const [visitas, setVisitas] = useState(null);
   const [techFiltro, setTechFiltro] = useState("Todos");
   const [cargando, setCargando] = useState(true);
+  const [proyectoModal, setProyectoModal] = useState(null);
 
   useEffect(() => {
     async function cargarDatos() {
@@ -108,7 +110,7 @@ export default function Home() {
 
         <main className="flex-1">
           {/* 1. Hero */}
-          <Hero perfil={perfil} />
+          <Hero perfil={perfil} onPerfilActualizado={setPerfil} />
 
           <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-32">
             {/* 2. Proyectos & Reto 4 (Filtro por Tecnología) */}
@@ -156,7 +158,11 @@ export default function Home() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {proyectosFiltrados.map((proyecto) => (
-                    <ProjectCard key={proyecto._id} proyecto={proyecto} />
+                    <ProjectCard
+                      key={proyecto._id}
+                      proyecto={proyecto}
+                      onOpenModal={setProyectoModal}
+                    />
                   ))}
                 </div>
               )}
@@ -211,6 +217,14 @@ export default function Home() {
 
         <Footer perfil={perfil} visitas={visitas} />
       </div>
+
+      {/* Modal de Galería / Carrusel Obsidian Glassmorphism */}
+      {proyectoModal && (
+        <ProjectModal
+          proyecto={proyectoModal}
+          onClose={() => setProyectoModal(null)}
+        />
+      )}
     </div>
   );
 }

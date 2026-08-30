@@ -1,4 +1,5 @@
-import { ExternalLink, Star } from "lucide-react";
+import { ExternalLink, Star, Images, Maximize2 } from "lucide-react";
+import TechIcon from "./TechIcon";
 
 function GithubIcon({ className = "w-3.5 h-3.5" }) {
   return (
@@ -8,15 +9,25 @@ function GithubIcon({ className = "w-3.5 h-3.5" }) {
   );
 }
 
-export default function ProjectCard({ proyecto }) {
+export default function ProjectCard({ proyecto, onOpenModal }) {
   if (!proyecto) return null;
 
+  const totalImagenes = Array.isArray(proyecto.imagenes) && proyecto.imagenes.length > 0
+    ? proyecto.imagenes.length
+    : proyecto.imagenUrl ? 1 : 0;
+
+  const imagenPortada = (Array.isArray(proyecto.imagenes) && proyecto.imagenes[0]) || proyecto.imagenUrl || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80";
+
   return (
-    <article className="glass-panel group relative rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300">
-      {/* Image container */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#0c0c10]">
+    <article className="glass-panel group relative rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:border-white/25 hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+      {/* Image container con trigger para abrir modal */}
+      <div
+        onClick={() => onOpenModal && onOpenModal(proyecto)}
+        className="relative aspect-[16/10] w-full overflow-hidden bg-[#0c0c10] cursor-pointer"
+        title="Clic para ver galería y detalles en pantalla completa"
+      >
         <img
-          src={proyecto.imagenUrl || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80"}
+          src={imagenPortada}
           alt={proyecto.titulo}
           onError={(e) => {
             e.target.onerror = null;
@@ -24,19 +35,41 @@ export default function ProjectCard({ proyecto }) {
           }}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d10] via-transparent to-transparent opacity-90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d10] via-transparent to-transparent opacity-90 group-hover:opacity-60 transition-opacity" />
 
-        {proyecto.destacado && (
-          <div className="absolute top-3.5 right-3.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-white text-black flex items-center gap-1 shadow-lg shadow-white/10">
-            <Star className="w-3 h-3 fill-current text-black" /> Destacado
-          </div>
-        )}
+        {/* Hover overlay hint */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none backdrop-blur-[2px]">
+          <span className="px-4 py-2 rounded-full bg-white/20 border border-white/30 text-white text-xs font-semibold backdrop-blur-md flex items-center gap-1.5 shadow-xl scale-95 group-hover:scale-100 transition-transform">
+            <Maximize2 className="w-3.5 h-3.5" /> Ver Galería
+          </span>
+        </div>
+
+        {/* Badges superiores */}
+        <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
+          {totalImagenes > 1 ? (
+            <div className="px-3 py-1 rounded-full text-[10px] font-semibold bg-black/70 text-white border border-white/15 flex items-center gap-1.5 backdrop-blur-md shadow-lg">
+              <Images className="w-3 h-3 text-cyan-300" />
+              <span>{totalImagenes} fotos</span>
+            </div>
+          ) : (
+            <div />
+          )}
+
+          {proyecto.destacado && (
+            <div className="px-3 py-1 rounded-full text-[11px] font-semibold bg-white text-black flex items-center gap-1 shadow-lg shadow-white/10">
+              <Star className="w-3 h-3 fill-current text-black" /> Destacado
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}
       <div className="p-6 flex-1 flex flex-col justify-between">
         <div>
-          <h3 className="text-lg font-bold text-white group-hover:text-neutral-200 transition-colors mb-2">
+          <h3
+            onClick={() => onOpenModal && onOpenModal(proyecto)}
+            className="text-lg font-bold text-white group-hover:text-cyan-200 transition-colors mb-2 cursor-pointer"
+          >
             {proyecto.titulo}
           </h3>
           <p className="text-neutral-400 text-xs leading-relaxed mb-5 line-clamp-3">
@@ -45,15 +78,16 @@ export default function ProjectCard({ proyecto }) {
         </div>
 
         <div>
-          {/* Tech badges */}
+          {/* Tech badges con logos oficiales */}
           <div className="flex flex-wrap gap-1.5 mb-6">
             {proyecto.tecnologias &&
               proyecto.tecnologias.map((tech, index) => (
                 <span
                   key={index}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/[0.04] text-neutral-300 border border-white/10"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/[0.04] text-neutral-300 border border-white/10"
                 >
-                  {tech}
+                  <TechIcon tech={tech} className="w-3 h-3" />
+                  <span>{tech}</span>
                 </span>
               ))}
           </div>

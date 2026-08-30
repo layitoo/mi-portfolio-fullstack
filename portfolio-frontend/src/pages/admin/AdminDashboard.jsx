@@ -30,6 +30,7 @@ import {
   actualizarSkill,
   eliminarSkill,
 } from "../../services/skills.service";
+import { subirImagenCloudinary } from "../../services/upload.service";
 
 import {
   User,
@@ -49,6 +50,8 @@ import {
   ChevronDown,
   Shield,
   ShieldAlert,
+  UploadCloud,
+  Loader2,
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -56,8 +59,14 @@ export default function AdminDashboard() {
   const esAdmin = (usuario?.rol || "admin") === "admin";
   const [tabActiva, setTabActiva] = useState("perfil");
   const [mensajeExito, setMensajeExito] = useState("");
+  const [mensajeError, setMensajeError] = useState("");
   const [advertenciaImagen, setAdvertenciaImagen] = useState("");
   const [arrastrandoIndex, setArrastrandoIndex] = useState(null);
+
+  // Estados de carga para subidas a Cloudinary
+  const [subiendoFotoPerfil, setSubiendoFotoPerfil] = useState(false);
+  const [subiendoImgNuevoProy, setSubiendoImgNuevoProy] = useState(false);
+  const [subiendoImgEditProy, setSubiendoImgEditProy] = useState(false);
 
   // Datos principales
   const [perfil, setPerfil] = useState({
@@ -78,6 +87,7 @@ export default function AdminDashboard() {
     titulo: "",
     descripcion: "",
     imagenUrl: "",
+    imagenes: [],
     tecnologias: "",
     repoUrl: "",
     demoUrl: "",
@@ -127,36 +137,33 @@ export default function AdminDashboard() {
     setTimeout(() => setMensajeExito(""), 3500);
   };
 
-  // Compresor y validador de imagen (1080p y 10MB)
-  const procesarYComprimirImagen = (file) => {
-    return new Promise((resolve, reject) => {
-      const pesoMB = file.size / (1024 * 1024);
-      let advertencias = [];
+  const notificarError = (msg) => {
+    setMensajeError(msg);
+    setTimeout(() => setMensajeError(""), 6000);
+  };
 
-      if (pesoMB > 10) {
-        advertencias.push(`El archivo pesa ${pesoMB.toFixed(1)}MB (supera el límite de 10MB)`);
+  // Compresor y optimizador automático a 1080p y WebP antes de subir a Cloudinary
+  const optimizarYComprimirArchivo = (file) => {
+    return new Promise((resolve, reject) => {
+      // Si no es imagen o es SVG, retornarlo tal cual
+      if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+        return resolve(file);
       }
 
+      const pesoOriginalMB = (file.size / (1024 * 1024)).toFixed(1);
       const reader = new FileReader();
+
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          if (img.width > 1920 || img.height > 1080) {
-            advertencias.push(`La resolución es ${img.width}x${img.height} (supera 1080p)`);
-          }
-
-          if (advertencias.length > 0) {
-            const mensajeAdv = `⚠️ Control de imagen: ${advertencias.join(" y ")}. Se optimizó automáticamente a 1080p.`;
-            setAdvertenciaImagen(mensajeAdv);
-            setTimeout(() => setAdvertenciaImagen(""), 9000);
-          }
-
           const maxW = 1920;
           const maxH = 1080;
           let w = img.width;
           let h = img.height;
+          let ajustada = false;
 
           if (w > maxW || h > maxH) {
+            ajustada = true;
             if (w / maxW > h / maxH) {
               h = Math.round((h * maxW) / w);
               w = maxW;
@@ -172,13 +179,36 @@ export default function AdminDashboard() {
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, w, h);
 
-          const base64Optimizado = canvas.toDataURL("image/jpeg", 0.85);
-          resolve(base64Optimizado);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                return resolve(file);
+              }
+
+              const pesoFinalKB = (blob.size / 1024).toFixed(0);
+              if (ajustada || file.size > 1.5 * 1024 * 1024) {
+                setAdvertenciaImagen(
+                  `✨ Imagen optimizada automáticamente: de ${pesoOriginalMB}MB (${img.width}x${img.height}) a ${pesoFinalKB}KB (${w}x${h}) antes de subir a la nube.`
+                );
+                setTimeout(() => setAdvertenciaImagen(""), 7000);
+              }
+
+              const nombreLimpio = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+              const archivoOptimizado = new File([blob], nombreLimpio, {
+                type: "image/webp",
+                lastModified: Date.now(),
+              });
+
+              resolve(archivoOptimizado);
+            },
+            "image/webp",
+            0.88
+          );
         };
-        img.onerror = () => reject(new Error("Error procesando imagen"));
+        img.onerror = () => reject(new Error("No se pudo procesar la imagen"));
         img.src = e.target.result;
       };
-      reader.onerror = () => reject(new Error("Error leyendo archivo"));
+      reader.onerror = () => reject(new Error("Error leyendo el archivo"));
       reader.readAsDataURL(file);
     });
   };
@@ -227,7 +257,12 @@ export default function AdminDashboard() {
         ? nuevoProyecto.tecnologias.split(",").map((t) => t.trim()).filter(Boolean)
         : nuevoProyecto.tecnologias;
 
-      const payload = { ...nuevoProyecto, tecnologias: techsArray };
+      const imagenes = Array.isArray(nuevoProyecto.imagenes) && nuevoProyecto.imagenes.length > 0
+        ? nuevoProyecto.imagenes
+        : nuevoProyecto.imagenUrl ? [nuevoProyecto.imagenUrl] : [];
+      const imagenUrl = imagenes[0] || nuevoProyecto.imagenUrl || "";
+
+      const payload = { ...nuevoProyecto, imagenes, imagenUrl, tecnologias: techsArray };
       const creado = await crearProyecto(payload);
       setProyectos([creado, ...proyectos]);
       notificar("Proyecto creado con éxito 🚀");
@@ -235,6 +270,7 @@ export default function AdminDashboard() {
         titulo: "",
         descripcion: "",
         imagenUrl: "",
+        imagenes: [],
         tecnologias: "",
         repoUrl: "",
         demoUrl: "",
@@ -243,7 +279,7 @@ export default function AdminDashboard() {
       setMostrarCrearProyecto(false);
     } catch (err) {
       const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al crear proyecto";
-      alert(msg);
+      notificarError(msg);
     }
   };
 
@@ -253,8 +289,14 @@ export default function AdminDashboard() {
       setFormEditProyecto({});
     } else {
       setEditandoProyectoId(p._id);
+      const imagenes = Array.isArray(p.imagenes) && p.imagenes.length > 0
+        ? p.imagenes
+        : p.imagenUrl ? [p.imagenUrl] : [];
+
       setFormEditProyecto({
         ...p,
+        imagenes,
+        imagenUrl: imagenes[0] || p.imagenUrl || "",
         tecnologias: Array.isArray(p.tecnologias) ? p.tecnologias.join(", ") : p.tecnologias || "",
       });
     }
@@ -266,7 +308,12 @@ export default function AdminDashboard() {
         ? formEditProyecto.tecnologias.split(",").map((t) => t.trim()).filter(Boolean)
         : formEditProyecto.tecnologias;
 
-      const payload = { ...formEditProyecto, tecnologias: techsArray };
+      const imagenes = Array.isArray(formEditProyecto.imagenes) && formEditProyecto.imagenes.length > 0
+        ? formEditProyecto.imagenes
+        : formEditProyecto.imagenUrl ? [formEditProyecto.imagenUrl] : [];
+      const imagenUrl = imagenes[0] || formEditProyecto.imagenUrl || "";
+
+      const payload = { ...formEditProyecto, imagenes, imagenUrl, tecnologias: techsArray };
       await actualizarProyecto(id, payload);
       setProyectos(proyectos.map((p) => (p._id === id ? { ...p, ...payload } : p)));
       notificar("Proyecto actualizado correctamente 🚀");
@@ -274,7 +321,7 @@ export default function AdminDashboard() {
       setFormEditProyecto({});
     } catch (err) {
       const msg = err.response?.data?.detalles?.[0]?.msg || err.response?.data?.error || err.response?.data?.detalle || "Error al actualizar proyecto";
-      alert(msg);
+      notificarError(msg);
     }
   };
 
@@ -581,20 +628,42 @@ export default function AdminDashboard() {
       <main className="flex-1 p-6 md:p-10 max-w-5xl overflow-y-auto">
         {/* Banner de Éxito */}
         {mensajeExito && (
-          <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-bounce">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>{mensajeExito}</span>
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between gap-2 animate-bounce">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{mensajeExito}</span>
+            </div>
+            <button onClick={() => setMensajeExito("")} className="text-emerald-400/70 hover:text-emerald-200">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
-        {/* Banner de Advertencia de Imagen */}
-        {advertenciaImagen && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs flex items-start gap-2.5 shadow-lg shadow-amber-500/10">
-            <span className="text-base leading-none">⚠️</span>
+        {/* Banner de Error Estilizado */}
+        {mensajeError && (
+          <div className="mb-6 p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-200 text-xs flex items-start gap-3 shadow-lg shadow-rose-500/10 animate-fade-in">
+            <span className="text-base leading-none">🚫</span>
             <div className="flex-1">
-              <strong className="font-semibold block mb-0.5">Control de Imagen:</strong>
+              <strong className="font-semibold block mb-0.5 text-rose-300">Hubo un problema:</strong>
+              <p className="text-rose-200/90 leading-relaxed">{mensajeError}</p>
+            </div>
+            <button onClick={() => setMensajeError("")} className="text-rose-400 hover:text-white cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Banner de Advertencia / Optimización de Imagen */}
+        {advertenciaImagen && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs flex items-start gap-2.5 shadow-lg shadow-amber-500/10 animate-fade-in">
+            <span className="text-base leading-none">✨</span>
+            <div className="flex-1">
+              <strong className="font-semibold block mb-0.5">Control y Optimización de Imagen:</strong>
               <p className="text-amber-200/90 leading-relaxed">{advertenciaImagen}</p>
             </div>
+            <button onClick={() => setAdvertenciaImagen("")} className="text-amber-400 hover:text-white cursor-pointer">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
@@ -631,30 +700,44 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Foto de Perfil (URL o Archivo)</label>
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Foto de Perfil (Cloudinary o URL)</label>
                 <input
                   type="text"
                   value={perfil.fotoUrl || ""}
                   onChange={(e) => setPerfil({ ...perfil, fotoUrl: e.target.value })}
-                  placeholder="https://... o seleccioná una foto abajo"
+                  placeholder="https://res.cloudinary.com/... o sube una imagen"
                   className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 mb-2 transition"
                 />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      try {
-                        const base64 = await procesarYComprimirImagen(file);
-                        setPerfil({ ...perfil, fotoUrl: base64 });
-                      } catch (err) {
-                        alert("Error procesando foto: " + err.message);
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={subiendoFotoPerfil}
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        try {
+                          setSubiendoFotoPerfil(true);
+                          const archivoOptimizado = await optimizarYComprimirArchivo(file);
+                          const res = await subirImagenCloudinary(archivoOptimizado);
+                          setPerfil({ ...perfil, fotoUrl: res.url });
+                          notificar("¡Foto de perfil subida a Cloudinary! ☁️");
+                        } catch (err) {
+                          notificarError("Error al subir foto de perfil: " + (err.response?.data?.error || err.message));
+                        } finally {
+                          setSubiendoFotoPerfil(false);
+                          e.target.value = "";
+                        }
                       }
-                    }
-                  }}
-                  className="text-xs text-neutral-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer"
-                />
+                    }}
+                    className="text-xs text-neutral-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer disabled:opacity-50"
+                  />
+                  {subiendoFotoPerfil && (
+                    <span className="flex items-center gap-1.5 text-xs text-cyan-400 font-medium animate-pulse">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Subiendo a Cloudinary...
+                    </span>
+                  )}
+                </div>
                 {perfil.fotoUrl && (
                   <div className="mt-3 relative w-16 h-16 rounded-full overflow-hidden border border-white/20 shadow-md">
                     <img src={perfil.fotoUrl} alt="Preview Perfil" className="w-full h-full object-cover" />
@@ -777,38 +860,102 @@ export default function AdminDashboard() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Imagen (URL o Archivo)</label>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+                      Imágenes del Proyecto (Galería / Carrusel)
+                    </label>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-2">
                       <input
                         type="text"
-                        value={nuevoProyecto.imagenUrl}
-                        onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, imagenUrl: e.target.value })}
-                        placeholder="https://..."
-                        className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 mb-2 transition"
-                      />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={async (e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            try {
-                              const base64 = await procesarYComprimirImagen(file);
-                              setNuevoProyecto({ ...nuevoProyecto, imagenUrl: base64 });
-                            } catch (err) {
-                              alert("Error procesando imagen: " + err.message);
-                            }
-                          }
+                        value={nuevoProyecto.imagenUrl || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const actual = nuevoProyecto.imagenes || [];
+                          setNuevoProyecto({
+                            ...nuevoProyecto,
+                            imagenUrl: val,
+                            imagenes: val ? (actual.includes(val) ? actual : [val, ...actual]) : actual,
+                          });
                         }}
-                        className="text-xs text-neutral-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer"
+                        placeholder="Pega una URL https://... o sube una o varias fotos abajo"
+                        className="flex-1 px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
                       />
-                      {nuevoProyecto.imagenUrl && (
-                        <div className="mt-2 relative w-24 h-16 rounded-xl overflow-hidden border border-white/20">
-                          <img src={nuevoProyecto.imagenUrl} alt="Preview" className="w-full h-full object-cover" />
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          disabled={subiendoImgNuevoProy}
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files);
+                            if (files.length > 0) {
+                              try {
+                                setSubiendoImgNuevoProy(true);
+                                const urlsSubidas = [];
+                                for (const file of files) {
+                                  const archivoOptimizado = await optimizarYComprimirArchivo(file);
+                                  const res = await subirImagenCloudinary(archivoOptimizado);
+                                  if (res.url) urlsSubidas.push(res.url);
+                                }
+                                const actuales = nuevoProyecto.imagenes || (nuevoProyecto.imagenUrl ? [nuevoProyecto.imagenUrl] : []);
+                                const nuevaLista = [...actuales, ...urlsSubidas];
+                                setNuevoProyecto({
+                                  ...nuevoProyecto,
+                                  imagenes: nuevaLista,
+                                  imagenUrl: nuevaLista[0] || "",
+                                });
+                                notificar(`¡${urlsSubidas.length} foto(s) subida(s) a Cloudinary! ☁️`);
+                              } catch (err) {
+                                notificarError("Error al subir imágenes: " + (err.response?.data?.error || err.message));
+                              } finally {
+                                setSubiendoImgNuevoProy(false);
+                                e.target.value = "";
+                              }
+                            }
+                          }}
+                          className="text-xs text-neutral-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[11px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer disabled:opacity-50"
+                        />
+                        {subiendoImgNuevoProy && (
+                          <span className="flex items-center gap-1.5 text-xs text-cyan-400 font-medium animate-pulse">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Subiendo...
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Miniaturas de imágenes agregadas */}
+                    {Array.isArray(nuevoProyecto.imagenes) && nuevoProyecto.imagenes.length > 0 && (
+                      <div className="flex flex-wrap gap-2.5 mt-2 p-3 bg-black/40 rounded-2xl border border-white/5">
+                        {nuevoProyecto.imagenes.map((img, idx) => (
+                          <div key={idx} className="relative group w-20 h-14 rounded-xl overflow-hidden border border-white/20">
+                            <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const filtradas = nuevoProyecto.imagenes.filter((_, i) => i !== idx);
+                                setNuevoProyecto({
+                                  ...nuevoProyecto,
+                                  imagenes: filtradas,
+                                  imagenUrl: filtradas[0] || "",
+                                });
+                              }}
+                              className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-lg"
+                              title="Eliminar esta foto"
+                            >
+                              ×
+                            </button>
+                            {idx === 0 && (
+                              <span className="absolute bottom-0 inset-x-0 bg-black/80 text-[8px] text-center text-cyan-300 font-mono py-0.5">
+                                Portada
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Link Repo (GitHub)</label>
                       <input
@@ -988,38 +1135,102 @@ export default function AdminDashboard() {
                             />
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div>
-                              <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Imagen (URL o Archivo)</label>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">
+                              Imágenes del Proyecto (Galería / Carrusel)
+                            </label>
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-2">
                               <input
                                 type="text"
                                 value={formEditProyecto.imagenUrl || ""}
-                                onChange={(e) => setFormEditProyecto({ ...formEditProyecto, imagenUrl: e.target.value })}
-                                className="w-full px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none mb-2"
-                              />
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={async (e) => {
-                                  const file = e.target.files[0];
-                                  if (file) {
-                                    try {
-                                      const base64 = await procesarYComprimirImagen(file);
-                                      setFormEditProyecto({ ...formEditProyecto, imagenUrl: base64 });
-                                    } catch (err) {
-                                      alert("Error procesando imagen: " + err.message);
-                                    }
-                                  }
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const actual = formEditProyecto.imagenes || [];
+                                  setFormEditProyecto({
+                                    ...formEditProyecto,
+                                    imagenUrl: val,
+                                    imagenes: val ? (actual.includes(val) ? actual : [val, ...actual]) : actual,
+                                  });
                                 }}
-                                className="text-xs text-neutral-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer"
+                                placeholder="URL https://... o sube una o varias fotos abajo"
+                                className="flex-1 px-3.5 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white/30"
                               />
-                              {formEditProyecto.imagenUrl && (
-                                <div className="mt-2 relative w-20 h-14 rounded-lg overflow-hidden border border-white/20">
-                                  <img src={formEditProyecto.imagenUrl} alt="Preview" className="w-full h-full object-cover" />
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2 shrink-0">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  disabled={subiendoImgEditProy}
+                                  onChange={async (e) => {
+                                    const files = Array.from(e.target.files);
+                                    if (files.length > 0) {
+                                      try {
+                                        setSubiendoImgEditProy(true);
+                                        const urlsSubidas = [];
+                                        for (const file of files) {
+                                          const archivoOptimizado = await optimizarYComprimirArchivo(file);
+                                          const res = await subirImagenCloudinary(archivoOptimizado);
+                                          if (res.url) urlsSubidas.push(res.url);
+                                        }
+                                        const actuales = formEditProyecto.imagenes || (formEditProyecto.imagenUrl ? [formEditProyecto.imagenUrl] : []);
+                                        const nuevaLista = [...actuales, ...urlsSubidas];
+                                        setFormEditProyecto({
+                                          ...formEditProyecto,
+                                          imagenes: nuevaLista,
+                                          imagenUrl: nuevaLista[0] || "",
+                                        });
+                                        notificar(`¡${urlsSubidas.length} foto(s) subida(s) a Cloudinary! ☁️`);
+                                      } catch (err) {
+                                        notificarError("Error al actualizar imágenes: " + (err.response?.data?.error || err.message));
+                                      } finally {
+                                        setSubiendoImgEditProy(false);
+                                        e.target.value = "";
+                                      }
+                                    }
+                                  }}
+                                  className="text-xs text-neutral-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-white/[0.08] file:text-white hover:file:bg-white/15 cursor-pointer disabled:opacity-50"
+                                />
+                                {subiendoImgEditProy && (
+                                  <span className="flex items-center gap-1.5 text-xs text-cyan-400 font-medium animate-pulse">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Subiendo...
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
+                            {/* Miniaturas de imágenes agregadas */}
+                            {Array.isArray(formEditProyecto.imagenes) && formEditProyecto.imagenes.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-2 p-2.5 bg-black/40 rounded-xl border border-white/5">
+                                {formEditProyecto.imagenes.map((img, idx) => (
+                                  <div key={idx} className="relative group w-16 h-12 rounded-lg overflow-hidden border border-white/20">
+                                    <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const filtradas = formEditProyecto.imagenes.filter((_, i) => i !== idx);
+                                        setFormEditProyecto({
+                                          ...formEditProyecto,
+                                          imagenes: filtradas,
+                                          imagenUrl: filtradas[0] || "",
+                                        });
+                                      }}
+                                      className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-red-600 text-white flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow"
+                                      title="Eliminar esta foto"
+                                    >
+                                      ×
+                                    </button>
+                                    {idx === 0 && (
+                                      <span className="absolute bottom-0 inset-x-0 bg-black/80 text-[7px] text-center text-cyan-300 font-mono py-0.2">
+                                        Portada
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-1.5">Link Repo (GitHub)</label>
                               <input

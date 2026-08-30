@@ -9,11 +9,12 @@ if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
     cloudinary,
     params: {
       folder: "portfolio",
-      allowed_formats: ["jpg", "png", "webp", "jpeg"],
+      allowed_formats: ["jpg", "png", "webp", "jpeg", "svg", "gif"],
+      transformation: [{ quality: "auto", fetch_format: "auto" }],
     },
   });
 } else {
-  // Almacenamiento en memoria como fallback si aún no configuraron Cloudinary
+  // Almacenamiento en memoria como fallback si no se configuraron variables
   storage = multer.memoryStorage();
 }
 
@@ -21,12 +22,13 @@ const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new Error("Solo se permiten archivos de imagen (jpg, png, webp)"), false);
+    cb(new Error("Solo se permiten archivos de imagen (jpg, png, webp, jpeg, svg, gif)"), false);
   }
 };
 
 module.exports = multer({
   storage,
-  limits: { fileSize: 3 * 1024 * 1024 }, // Máximo 3MB
+  limits: { fileSize: 25 * 1024 * 1024 }, // Máximo 25MB
   fileFilter,
 });
+
