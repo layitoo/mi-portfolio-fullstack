@@ -3,8 +3,9 @@ const ProyectosService = require("../services/proyectos.service");
 
 exports.listar = async (req, res) => {
   try {
-    const { tech } = req.query;
-    const proyectos = await ProyectosModel.obtenerTodos({ tech });
+    const { tech, page, limit, destacado } = req.query;
+    const opciones = page || limit ? { page, limit } : {};
+    const proyectos = await ProyectosModel.obtenerTodos({ tech, destacado }, opciones);
     res.json(proyectos);
   } catch (error) {
     res.status(500).json({ error: "Error al obtener proyectos", detalle: error.message });

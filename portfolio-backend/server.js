@@ -3,12 +3,59 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const { conectarDB } = require("./config/db");
+const { globalApiLimiter } = require("./middlewares/rateLimiters");
+
+// ====================================================================
+// VALIDACIÓN CRÍTICA DE VARIABLES DE ENTORNO EN ARRANQUE (Punto 1)
+// ====================================================================
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length < 8) {
+  console.error("❌ ERROR CRÍTICO DE SEGURIDAD: 'JWT_SECRET' no está configurada o es demasiado débil.");
+  console.error("   Por favor, define una clave segura en tu archivo .env antes de iniciar el servidor.");
+  process.exit(1);
+}
+
+if (!process.env.MONGO_URI) {
+  console.error("❌ ERROR CRÍTICO: 'MONGO_URI' no está configurada en las variables de entorno.");
+  process.exit(1);
+}
 
 const app = express();
 
-// Middlewares globales
-app.use(helmet());
+// ====================================================================
+// SEGURIDAD DE CABECERAS CON HELMET (Punto 4)
+// ====================================================================
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://*.cloudinary.com", "blob:"],
+        connectSrc: [
+          "'self'",
+          "https://res.cloudinary.com",
+          ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map((u) => u.trim()) : []),
+        ],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    xContentTypeOptions: true,
+    xDnsPrefetchControl: { allow: false },
+    xFrameOptions: { action: "deny" },
+  })
+);
 
+// ====================================================================
+// CONFIGURACIÓN DE CORS
+// ====================================================================
 const allowedOrigins = [
   "http://localhost:5173",
   ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map((o) => o.trim()) : []),
@@ -19,7 +66,11 @@ app.use(
     origin: (origin, callback) => {
       // Permitir peticiones sin origin (herramientas locales, scripts, Render health checks)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin) || allowedOrigins.some((ao) => origin.startsWith(ao)) || origin.endsWith(".vercel.app")) {
+      if (
+        allowedOrigins.includes(origin) ||
+        allowedOrigins.some((ao) => origin.startsWith(ao)) ||
+        origin.endsWith(".vercel.app")
+      ) {
         return callback(null, true);
       }
       return callback(new Error("No permitido por CORS"));
@@ -28,8 +79,16 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// ====================================================================
+// LÍMITE DE PAYLOAD REALISTA CONTRA DoS / ABUSO DE MEMORIA (Punto 8)
+// ====================================================================
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ limit: "2mb", extended: true }));
+
+// ====================================================================
+// RATE LIMITING GLOBAL (Punto 3)
+// ====================================================================
+app.use("/api", globalApiLimiter);
 
 // Ruta de estado / bienvenida
 app.get("/api", (req, res) => {
@@ -42,6 +101,8 @@ app.get("/api", (req, res) => {
       "/api/educacion",
       "/api/skills",
       "/api/auth",
+      "/api/contacto",
+      "/api/visitas",
     ],
   });
 });

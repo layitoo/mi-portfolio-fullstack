@@ -2,7 +2,9 @@ const SkillsModel = require("../models/skills.model");
 
 exports.listar = async (req, res) => {
   try {
-    const skills = await SkillsModel.obtenerTodos();
+    const { categoria, page, limit } = req.query;
+    const opciones = page || limit ? { page, limit } : {};
+    const skills = await SkillsModel.obtenerTodos({ categoria }, opciones);
     res.json(skills);
   } catch (error) {
     res.status(500).json({ error: "Error al obtener skills", detalle: error.message });

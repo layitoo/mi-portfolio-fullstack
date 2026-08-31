@@ -67,13 +67,6 @@ export default function Hero({ perfil, onPerfilActualizado }) {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
-        {/* Top Tag Pill */}
-        <div className="flex items-center gap-2 mb-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs font-medium text-neutral-300 backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Disponible para nuevos proyectos
-          </div>
-        </div>
 
         {/* Headline */}
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08] mb-5">

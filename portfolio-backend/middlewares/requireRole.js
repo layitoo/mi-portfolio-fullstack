@@ -4,10 +4,12 @@ module.exports = (...rolesPermitidos) => {
       return res.status(401).json({ error: "Acceso no autorizado: Debe iniciar sesión" });
     }
 
-    const rolUsuario = req.usuario.rol || "admin";
-    if (!rolesPermitidos.includes(rolUsuario)) {
+    const rolUsuario = req.usuario.rol;
+    if (!rolUsuario || !rolesPermitidos.includes(rolUsuario)) {
       return res.status(403).json({
-        error: `Permiso denegado: Se requiere rol de Administrador para eliminar registros. Tu rol actual es [${rolUsuario}].`,
+        error: `Permiso denegado: Se requiere uno de los siguientes roles [${rolesPermitidos.join(
+          ", "
+        )}]. Tu rol actual es [${rolUsuario || "ninguno"}].`,
       });
     }
 

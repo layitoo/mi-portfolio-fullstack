@@ -215,7 +215,7 @@ export default function Home() {
           </div>
         </main>
 
-        <Footer perfil={perfil} visitas={visitas} />
+        <Footer perfil={perfil} />
       </div>
 
       {/* Modal de Galería / Carrusel Obsidian Glassmorphism */}

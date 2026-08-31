@@ -3,15 +3,40 @@ const { getDB } = require("../config/db");
 
 const coleccion = () => getDB().collection("proyectos");
 
-exports.obtenerTodos = (filtro = {}) => {
+exports.obtenerTodos = async (filtro = {}, opciones = {}) => {
   const query = {};
   if (filtro.tech) {
     query.tecnologias = { $regex: filtro.tech, $options: "i" };
   }
-  return coleccion()
+  if (filtro.destacado !== undefined) {
+    query.destacado = filtro.destacado === true || filtro.destacado === "true";
+  }
+
+  const cursor = coleccion()
     .find(query)
-    .sort({ orden: 1, destacado: -1, _id: -1 })
-    .toArray();
+    .sort({ orden: 1, destacado: -1, _id: -1 });
+
+  // Soporte de paginación opcional (Punto 9)
+  if (opciones.page || opciones.limit) {
+    const page = Math.max(1, parseInt(opciones.page, 10) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(opciones.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    const [datos, total] = await Promise.all([
+      cursor.skip(skip).limit(limit).toArray(),
+      coleccion().countDocuments(query),
+    ]);
+
+    return {
+      datos,
+      total,
+      pagina: page,
+      limite: limit,
+      totalPaginas: Math.ceil(total / limit),
+    };
+  }
+
+  return cursor.toArray();
 };
 
 exports.obtenerPorId = (id) => {

@@ -30,6 +30,7 @@ import {
   actualizarSkill,
   eliminarSkill,
 } from "../../services/skills.service";
+import { obtenerVisitas } from "../../services/visitas.service";
 import { subirImagenCloudinary } from "../../services/upload.service";
 
 import {
@@ -52,12 +53,16 @@ import {
   ShieldAlert,
   UploadCloud,
   Loader2,
+  Eye,
+  Menu,
 } from "lucide-react";
 
 export default function AdminDashboard() {
   const { usuario, logout } = useAuth();
   const esAdmin = (usuario?.rol || "admin") === "admin";
+  const rolTexto = esAdmin ? "Admin" : "Editor";
   const [tabActiva, setTabActiva] = useState("perfil");
+  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [mensajeExito, setMensajeExito] = useState("");
   const [mensajeError, setMensajeError] = useState("");
   const [advertenciaImagen, setAdvertenciaImagen] = useState("");
@@ -71,7 +76,6 @@ export default function AdminDashboard() {
   // Datos principales
   const [perfil, setPerfil] = useState({
     nombre: "",
-    titulo: "",
     bio: "",
     fotoUrl: "",
     redes: { github: "", linkedin: "", email: "" },
@@ -80,6 +84,7 @@ export default function AdminDashboard() {
   const [experiencias, setExperiencias] = useState([]);
   const [educacion, setEducacion] = useState([]);
   const [skills, setSkills] = useState([]);
+  const [visitas, setVisitas] = useState(null);
 
   // Estados para creación de nuevos elementos (acordeones superiores)
   const [mostrarCrearProyecto, setMostrarCrearProyecto] = useState(false);
@@ -219,18 +224,20 @@ export default function AdminDashboard() {
 
   const cargarTodosLosDatos = async () => {
     try {
-      const [p, proy, exp, edu, sk] = await Promise.all([
+      const [p, proy, exp, edu, sk, vis] = await Promise.all([
         obtenerPerfil().catch(() => null),
         obtenerProyectos().catch(() => []),
         obtenerExperiencias().catch(() => []),
         obtenerEducacion().catch(() => []),
         obtenerSkills().catch(() => []),
+        obtenerVisitas().catch(() => null),
       ]);
       if (p) setPerfil(p);
       setProyectos(proy);
       setExperiencias(exp);
       setEducacion(edu);
       setSkills(sk);
+      if (vis?.total !== undefined) setVisitas(vis.total);
     } catch (err) {
       console.error(err);
     }
@@ -538,8 +545,189 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#030304] text-neutral-100 flex flex-col md:flex-row bg-grid-pattern selection:bg-white selection:text-black">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-[#08080a] border-r border-white/10 p-6 flex flex-col justify-between shrink-0">
+      {/* Top Header Barra Móvil (Solo visible en móviles) */}
+      <div className="md:hidden sticky top-0 z-40 bg-[#08080a]/95 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-2.5">
+          <Link
+            to="/"
+            className="p-2 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 hover:text-white border border-white/10 transition"
+            title="Volver a la web"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </Link>
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-white text-black text-[10px] font-bold flex items-center justify-center shadow-md">◈</span>
+            <div>
+              <span className="text-xs font-bold text-white block leading-tight">Panel {rolTexto}</span>
+              <span className="text-[10px] text-neutral-400 font-mono capitalize">{tabActiva}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Badge de Sección Activa */}
+          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-full px-2.5 py-1 text-[11px] text-neutral-300 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span className="capitalize">{tabActiva}</span>
+          </div>
+
+          {/* Botón Hamburguesa Móvil */}
+          <button
+            onClick={() => setMenuMovilAbierto(!menuMovilAbierto)}
+            className="p-2 rounded-xl text-neutral-200 hover:text-white bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 transition-all cursor-pointer flex items-center justify-center active:scale-95"
+            aria-label={menuMovilAbierto ? "Cerrar menú" : "Abrir menú"}
+          >
+            {menuMovilAbierto ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Drawer / Menú Desplegable Móvil Flotante con Apertura y Cierre Suave */}
+      <div
+        className={`md:hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col p-4 pt-14 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          menuMovilAbierto
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMenuMovilAbierto(false)}
+      >
+        <div
+          className={`bg-[#0b0b0e] border border-white/15 rounded-3xl p-5 shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            menuMovilAbierto
+              ? "translate-y-0 scale-100 opacity-100"
+              : "-translate-y-4 scale-95 opacity-0"
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center">◈</span>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">Panel de Control</h3>
+                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono mt-0.5 ${
+                  esAdmin
+                    ? "bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                    : "bg-blue-500/10 text-blue-300 border border-blue-500/20"
+                }`}>
+                  {esAdmin ? <Shield className="w-2.5 h-2.5" /> : <Edit2 className="w-2.5 h-2.5" />}
+                  {esAdmin ? "Administrador" : "Editor"}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setMenuMovilAbierto(false)}
+              className="p-2 rounded-full text-neutral-400 hover:text-white bg-white/[0.06] border border-white/10 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <nav className="space-y-1.5 text-xs font-medium">
+            <button
+              onClick={() => {
+                setTabActiva("perfil");
+                setMenuMovilAbierto(false);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition cursor-pointer ${
+                tabActiva === "perfil"
+                  ? "bg-white text-black font-bold shadow-md shadow-white/10"
+                  : "text-neutral-300 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <User className="w-4 h-4" /> Perfil
+              </span>
+              <span className="text-[10px] opacity-70">Hero & Redes</span>
+            </button>
+            <button
+              onClick={() => {
+                setTabActiva("proyectos");
+                setMenuMovilAbierto(false);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition cursor-pointer ${
+                tabActiva === "proyectos"
+                  ? "bg-white text-black font-bold shadow-md shadow-white/10"
+                  : "text-neutral-300 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <Sparkles className="w-4 h-4" /> Proyectos
+              </span>
+              <span className="text-[10px] font-mono opacity-70">({proyectos.length})</span>
+            </button>
+            <button
+              onClick={() => {
+                setTabActiva("experiencia");
+                setMenuMovilAbierto(false);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition cursor-pointer ${
+                tabActiva === "experiencia"
+                  ? "bg-white text-black font-bold shadow-md shadow-white/10"
+                  : "text-neutral-300 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <Briefcase className="w-4 h-4" /> Experiencia
+              </span>
+              <span className="text-[10px] font-mono opacity-70">({experiencias.length})</span>
+            </button>
+            <button
+              onClick={() => {
+                setTabActiva("educacion");
+                setMenuMovilAbierto(false);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition cursor-pointer ${
+                tabActiva === "educacion"
+                  ? "bg-white text-black font-bold shadow-md shadow-white/10"
+                  : "text-neutral-300 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <GraduationCap className="w-4 h-4" /> Educación
+              </span>
+              <span className="text-[10px] font-mono opacity-70">({educacion.length})</span>
+            </button>
+            <button
+              onClick={() => {
+                setTabActiva("skills");
+                setMenuMovilAbierto(false);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition cursor-pointer ${
+                tabActiva === "skills"
+                  ? "bg-white text-black font-bold shadow-md shadow-white/10"
+                  : "text-neutral-300 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span className="flex items-center gap-2.5">
+                <Code2 className="w-4 h-4" /> Skills
+              </span>
+              <span className="text-[10px] font-mono opacity-70">({skills.length})</span>
+            </button>
+          </nav>
+
+          <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+            <Link
+              to="/"
+              onClick={() => setMenuMovilAbierto(false)}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs font-medium text-neutral-300 hover:text-white border border-white/10 transition"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Volver a la web
+            </Link>
+            <button
+              onClick={() => {
+                setMenuMovilAbierto(false);
+                logout();
+              }}
+              className="px-3.5 py-2.5 rounded-xl text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" /> Salir
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar de Escritorio (Solo visible en pantallas md en adelante) */}
+      <aside className="hidden md:flex md:w-64 bg-[#08080a] border-r border-white/10 p-6 flex-col justify-between shrink-0 h-screen sticky top-0">
         <div>
           <div className="flex items-center gap-2 mb-8">
             <Link to="/" className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition">
@@ -614,6 +802,23 @@ export default function AdminDashboard() {
               <Code2 className="w-4 h-4" /> Skills ({skills.length})
             </button>
           </nav>
+
+          {/* Widget de Visitas / Tráfico en Sidebar (Desktop) */}
+          <div className="mt-8 p-4 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
+            <div className="flex items-center justify-between text-neutral-400 text-xs mb-2 font-medium">
+              <span className="flex items-center gap-1.5 text-neutral-300">
+                <Eye className="w-3.5 h-3.5 text-emerald-400" /> Tráfico Web
+              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-black text-white font-mono tracking-tight">
+                {visitas !== null ? visitas.toLocaleString() : "..."}
+              </span>
+              <span className="text-[11px] text-neutral-500">visitas</span>
+            </div>
+            <p className="text-[10px] text-neutral-500 mt-1">Conteo total acumulado</p>
+          </div>
         </div>
 
         <button
@@ -625,7 +830,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 md:p-10 max-w-5xl overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-6 md:p-10 max-w-5xl overflow-y-auto">
         {/* Banner de Éxito */}
         {mensajeExito && (
           <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between gap-2 animate-bounce">
@@ -667,6 +872,48 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Resumen Superior de Métricas */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mb-8">
+          <div className="glass-panel p-4 rounded-2xl border border-white/10 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <Eye className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider block">Visitas</span>
+              <span className="text-lg font-bold text-white font-mono">
+                {visitas !== null ? visitas.toLocaleString() : "..."}
+              </span>
+            </div>
+          </div>
+          <div className="glass-panel p-4 rounded-2xl border border-white/10 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider block">Proyectos</span>
+              <span className="text-lg font-bold text-white font-mono">{proyectos.length}</span>
+            </div>
+          </div>
+          <div className="glass-panel p-4 rounded-2xl border border-white/10 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider block">Experiencia</span>
+              <span className="text-lg font-bold text-white font-mono">{experiencias.length}</span>
+            </div>
+          </div>
+          <div className="glass-panel p-4 rounded-2xl border border-white/10 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0">
+              <Code2 className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-semibold text-neutral-400 tracking-wider block">Skills</span>
+              <span className="text-lg font-bold text-white font-mono">{skills.length}</span>
+            </div>
+          </div>
+        </div>
+
         {/* ========================================================
             TAB 1: PERFIL
         ======================================================== */}
@@ -678,25 +925,14 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleGuardarPerfil} className="glass-panel rounded-3xl p-6 sm:p-8 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Nombre Completo</label>
-                  <input
-                    type="text"
-                    value={perfil.nombre || ""}
-                    onChange={(e) => setPerfil({ ...perfil, nombre: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Título Profesional</label>
-                  <input
-                    type="text"
-                    value={perfil.titulo || ""}
-                    onChange={(e) => setPerfil({ ...perfil, titulo: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
-                  />
-                </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Nombre Completo</label>
+                <input
+                  type="text"
+                  value={perfil.nombre || ""}
+                  onChange={(e) => setPerfil({ ...perfil, nombre: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                />
               </div>
 
               <div>

@@ -1,4 +1,5 @@
 require("dotenv").config();
+const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const { conectarDB, getDB } = require("./config/db");
 
@@ -6,9 +7,9 @@ async function crearUsuarios() {
   await conectarDB();
   const db = getDB();
 
-  // 1. Usuario Administrador (Acceso total)
-  const adminEmail = "admin@miportfolio.com";
-  const adminPass = "admin123";
+  // 1. Usuario Administrador (Permite leer de .env o genera password criptográfica segura)
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@miportfolio.com";
+  const adminPass = process.env.ADMIN_PASSWORD || crypto.randomBytes(8).toString("hex") + "!";
   const adminHash = await bcrypt.hash(adminPass, 10);
 
   await db.collection("usuarios").updateOne(
@@ -25,9 +26,9 @@ async function crearUsuarios() {
     { upsert: true }
   );
 
-  // 2. Usuario Editor (Puede crear y editar, pero NO eliminar - Reto 5)
-  const editorEmail = "editor@miportfolio.com";
-  const editorPass = "editor123";
+  // 2. Usuario Editor (Permite leer de .env o genera password criptográfica segura)
+  const editorEmail = process.env.EDITOR_EMAIL || "editor@miportfolio.com";
+  const editorPass = process.env.EDITOR_PASSWORD || crypto.randomBytes(8).toString("hex") + "!";
   const editorHash = await bcrypt.hash(editorPass, 10);
 
   await db.collection("usuarios").updateOne(
@@ -44,17 +45,19 @@ async function crearUsuarios() {
     { upsert: true }
   );
 
-  console.log("=========================================");
-  console.log("✅ Cuentas de acceso configuradas con éxito:");
-  console.log("-----------------------------------------");
+  console.log("=================================================");
+  console.log("🔐 CUENTAS DE ACCESO GENERADAS / ACTUALIZADAS:");
+  console.log("-------------------------------------------------");
   console.log("👑 ADMINISTRADOR (Acceso Total):");
   console.log(`   Email:      ${adminEmail}`);
   console.log(`   Password:   ${adminPass}`);
-  console.log("-----------------------------------------");
-  console.log("✏️ EDITOR (Creación y Edición sin borrado):");
+  console.log("-------------------------------------------------");
+  console.log("✏️ EDITOR (Creación y Edición sin permisos de borrado):");
   console.log(`   Email:      ${editorEmail}`);
   console.log(`   Password:   ${editorPass}`);
-  console.log("=========================================");
+  console.log("=================================================");
+  console.log("💡 Tip de Seguridad: Guarda estas credenciales en un gestor seguro.");
+  console.log("=================================================");
   process.exit(0);
 }
 

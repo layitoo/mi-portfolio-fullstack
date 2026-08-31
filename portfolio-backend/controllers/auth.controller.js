@@ -10,6 +10,12 @@ exports.registrar = async (req, res) => {
       return res.status(400).json({ error: "Email y contraseña requeridos" });
     }
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error("❌ ERROR CRÍTICO: JWT_SECRET no está configurada.");
+      return res.status(500).json({ error: "Error de configuración del servidor" });
+    }
+
     const existente = await UsuariosModel.obtenerPorEmail(email);
     if (existente) {
       return res.status(409).json({ error: "El email ya está registrado" });
@@ -20,12 +26,12 @@ exports.registrar = async (req, res) => {
       email,
       passwordHash,
       rol: "admin",
-      cuentaVerificada: true, // Habilitado para desarrollo/primer admin
+      cuentaVerificada: true,
     });
 
     const token = jwt.sign(
       { id: usuario._id, email: usuario.email, rol: usuario.rol },
-      process.env.JWT_SECRET || "secreto_default",
+      jwtSecret,
       { expiresIn: "7d" }
     );
 
@@ -47,6 +53,12 @@ exports.login = async (req, res) => {
       return res.status(400).json({ error: "Email y contraseña requeridos" });
     }
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error("❌ ERROR CRÍTICO: JWT_SECRET no está configurada.");
+      return res.status(500).json({ error: "Error de configuración del servidor" });
+    }
+
     const usuario = await UsuariosModel.obtenerPorEmail(email);
     if (!usuario) {
       return res.status(401).json({ error: "Email o contraseña incorrectos" });
@@ -59,7 +71,7 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign(
       { id: usuario._id, email: usuario.email, rol: usuario.rol },
-      process.env.JWT_SECRET || "secreto_default",
+      jwtSecret,
       { expiresIn: "7d" }
     );
 
