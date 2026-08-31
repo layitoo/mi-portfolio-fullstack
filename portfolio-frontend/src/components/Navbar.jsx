@@ -65,8 +65,12 @@ export default function Navbar() {
           onClick={(e) => handleScrollTo(e, "top")}
           className="flex items-center gap-2.5 group shrink-0 cursor-pointer"
         >
-          <div className="w-6 h-6 rounded-full bg-gradient-to-b from-white via-neutral-300 to-neutral-700 flex items-center justify-center text-black shadow-md shadow-white/10 group-hover:scale-105 transition">
-            <span className="font-extrabold text-[10px]">◈</span>
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-white/20 shadow-md shadow-white/10 group-hover:scale-105 group-hover:border-white/40 transition-all flex items-center justify-center bg-black shrink-0">
+            <img
+              src="/logo.png"
+              alt="Logo Leandro Lalanda"
+              className="w-full h-full object-cover object-center"
+            />
           </div>
           <span className="font-semibold text-xs sm:text-sm tracking-tight text-white group-hover:text-neutral-300 transition">
             Leandro Lalanda

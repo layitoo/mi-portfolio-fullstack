@@ -556,7 +556,9 @@ export default function AdminDashboard() {
             <ArrowLeft className="w-3.5 h-3.5" />
           </Link>
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-white text-black text-[10px] font-bold flex items-center justify-center shadow-md">◈</span>
+            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/20 shadow-md shrink-0 bg-black flex items-center justify-center">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+            </div>
             <div>
               <span className="text-xs font-bold text-white block leading-tight">Panel {rolTexto}</span>
               <span className="text-[10px] text-neutral-400 font-mono capitalize">{tabActiva}</span>
@@ -736,7 +738,9 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-3 mb-6">
-            <span className="w-8 h-8 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center shadow-md shadow-white/10 shrink-0">◈</span>
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 shadow-md shadow-white/10 shrink-0 bg-black flex items-center justify-center">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+            </div>
             <div>
               <h2 className="text-sm font-bold text-white tracking-tight">Panel de Control</h2>
               <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono mt-0.5 ${
