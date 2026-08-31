@@ -77,14 +77,14 @@ export default function ProjectModal({ proyecto, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-6 overflow-y-auto">
-      {/* Backdrop oscuro con fade suave */}
+      {/* Backdrop translúcido con desenfoque de fondo frosted glass suave */}
       <div
-        className="fixed inset-0 bg-black/85 backdrop-blur-2xl animate-backdrop-fade cursor-pointer"
+        className="fixed inset-0 bg-black/50 backdrop-blur-xl animate-backdrop-fade cursor-pointer"
         onClick={onClose}
       />
 
-      {/* Modal Card con animación de entrada suave y estilo Obsidian */}
-      <div className="relative w-full max-w-3xl my-auto z-10 rounded-[28px] bg-[#0c0c10]/95 border border-white/15 shadow-[0_25px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.25)] backdrop-blur-3xl p-6 sm:p-8 flex flex-col animate-modal-enter">
+      {/* Modal Card con animación de entrada suave y estilo Obsidian Glassmorphism */}
+      <div className="relative w-full max-w-3xl my-auto z-10 rounded-[28px] bg-[#0c0c10]/90 border border-white/20 shadow-[0_30px_90px_rgba(0,0,0,0.75),inset_0_1px_1px_rgba(255,255,255,0.25)] backdrop-blur-2xl p-6 sm:p-8 flex flex-col animate-modal-enter">
         
         {/* 1. Header con Título y Botón Cerrar (X) */}
         <div className="flex items-center justify-between gap-4 mb-5">
