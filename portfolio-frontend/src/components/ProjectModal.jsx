@@ -166,7 +166,7 @@ export default function ProjectModal({ proyecto, onClose }) {
         {/* 4. Descripción del Proyecto */}
         <div className="mb-6 text-left">
           <h4 className="text-sm font-bold text-white mb-1.5">Descripción del Proyecto:</h4>
-          <p className="text-neutral-400 text-xs sm:text-sm leading-relaxed">
+          <p className="text-neutral-400 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
             {proyecto.descripcion}
           </p>
         </div>

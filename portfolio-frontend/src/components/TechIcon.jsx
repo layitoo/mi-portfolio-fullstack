@@ -25,7 +25,9 @@ import {
   SiSupabase,
   SiGraphql,
   SiJsonwebtokens,
+  SiUnity,
 } from "react-icons/si";
+import { TbBrandCSharp } from "react-icons/tb";
 
 export default function TechIcon({ tech, className = "w-3.5 h-3.5" }) {
   if (!tech) return <span className="text-neutral-400">◈</span>;
@@ -45,6 +47,10 @@ export default function TechIcon({ tech, className = "w-3.5 h-3.5" }) {
   if (t.includes("vite")) return <SiVite className={`${className} text-[#646CFF] shrink-0`} />;
   if (t.includes("blender") || t.includes("3d") || t.includes("modelado") || t.includes("animacion")) {
     return <SiBlender className={`${className} text-[#E87D0D] shrink-0`} />;
+  }
+  if (t.includes("unity")) return <SiUnity className={`${className} text-white shrink-0`} />;
+  if (t.includes("c#") || t.includes("csharp") || t === "cs") {
+    return <TbBrandCSharp className={`${className} text-[#9B4F96] shrink-0`} />;
   }
   if (t.includes("three")) return <SiThreedotjs className={`${className} text-white shrink-0`} />;
   if (t.includes("git") && !t.includes("hub")) return <SiGit className={`${className} text-[#F05032] shrink-0`} />;
