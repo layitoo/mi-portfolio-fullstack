@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { obtenerPerfil } from "../services/perfil.service";
 import { obtenerProyectos } from "../services/proyectos.service";
 import { obtenerExperiencias } from "../services/experiencia.service";
@@ -22,8 +22,6 @@ export default function Home() {
   const [experiencias, setExperiencias] = useState([]);
   const [educacion, setEducacion] = useState([]);
   const [skills, setSkills] = useState([]);
-  const [visitas, setVisitas] = useState(null);
-  const [techFiltro, setTechFiltro] = useState("Todos");
   const [cargando, setCargando] = useState(true);
   const [proyectoModal, setProyectoModal] = useState(null);
 
@@ -39,7 +37,7 @@ export default function Home() {
           promesaVisita = obtenerVisitas().catch(() => ({ total: 1 }));
         }
 
-        const [perfilData, proyectosData, experienciasData, educacionData, skillsData, visitasData] =
+        const [perfilData, proyectosData, experienciasData, educacionData, skillsData] =
           await Promise.all([
             obtenerPerfil().catch(() => null),
             obtenerProyectos().catch(() => []),
@@ -54,7 +52,6 @@ export default function Home() {
         setExperiencias(experienciasData);
         setEducacion(educacionData);
         setSkills(skillsData);
-        setVisitas(visitasData?.total || 1);
       } catch (error) {
         console.error("Error cargando datos del portfolio:", error);
       } finally {
@@ -65,31 +62,7 @@ export default function Home() {
     cargarDatos();
   }, []);
 
-  // Extraer lista única de tecnologías presentes en los proyectos para la barra de filtros
-  const tecnologiasDisponibles = useMemo(() => {
-    const set = new Set();
-    proyectos.forEach((p) => {
-      if (Array.isArray(p.tecnologias)) {
-        p.tecnologias.forEach((t) => set.add(t.trim()));
-      } else if (typeof p.tecnologias === "string") {
-        p.tecnologias.split(",").forEach((t) => set.add(t.trim()));
-      }
-    });
-    return ["Todos", ...Array.from(set).filter(Boolean)];
-  }, [proyectos]);
 
-  // Proyectos filtrados según la tecnología seleccionada (Reto 4)
-  const proyectosFiltrados = useMemo(() => {
-    if (techFiltro === "Todos") return proyectos;
-    return proyectos.filter((p) => {
-      const techs = Array.isArray(p.tecnologias)
-        ? p.tecnologias
-        : typeof p.tecnologias === "string"
-        ? p.tecnologias.split(",").map((t) => t.trim())
-        : [];
-      return techs.some((t) => t.toLowerCase() === techFiltro.toLowerCase());
-    });
-  }, [proyectos, techFiltro]);
 
   if (cargando) {
     return (
@@ -113,9 +86,9 @@ export default function Home() {
           <Hero perfil={perfil} onPerfilActualizado={setPerfil} />
 
           <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-32">
-            {/* 2. Proyectos & Reto 4 (Filtro por Tecnología) */}
+            {/* 2. Proyectos */}
             <section id="proyectos" className="scroll-mt-28">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                 <div>
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-white/[0.04] border border-white/10 text-neutral-400 mb-3">
                     <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
@@ -124,40 +97,18 @@ export default function Home() {
                   <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
                     Proyectos & Aplicaciones
                   </h2>
-                  <p className="text-neutral-400 text-xs sm:text-sm mt-1">
-                    Soluciones web completas construidas de punta a punta.
-                  </p>
                 </div>
               </div>
 
-              {/* Barra de Filtros por Tecnología (Reto 4) */}
-              {tecnologiasDisponibles.length > 2 && (
-                <div className="flex flex-wrap items-center gap-2 mb-8">
-                  {tecnologiasDisponibles.map((tech) => (
-                    <button
-                      key={tech}
-                      onClick={() => setTechFiltro(tech)}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                        techFiltro === tech
-                          ? "bg-white text-black font-semibold shadow-md shadow-white/10"
-                          : "bg-white/[0.03] text-neutral-400 hover:text-white hover:bg-white/[0.08] border border-white/5"
-                      }`}
-                    >
-                      {tech}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {proyectosFiltrados.length === 0 ? (
+              {proyectos.length === 0 ? (
                 <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 text-center">
                   <p className="text-neutral-500 text-xs italic">
-                    No se encontraron proyectos con la tecnología seleccionada ({techFiltro}).
+                    No hay proyectos disponibles actualmente.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {proyectosFiltrados.map((proyecto) => (
+                  {proyectos.map((proyecto) => (
                     <ProjectCard
                       key={proyecto._id}
                       proyecto={proyecto}

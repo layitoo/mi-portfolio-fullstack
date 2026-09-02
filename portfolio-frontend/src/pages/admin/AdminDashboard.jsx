@@ -78,7 +78,7 @@ export default function AdminDashboard() {
     nombre: "",
     bio: "",
     fotoUrl: "",
-    redes: { github: "", linkedin: "", email: "" },
+    redes: { github: "", linkedin: "", email: "", cv: "" },
   });
   const [proyectos, setProyectos] = useState([]);
   const [experiencias, setExperiencias] = useState([]);
@@ -1020,6 +1020,16 @@ export default function AdminDashboard() {
                     type="text"
                     value={perfil.redes?.linkedin || ""}
                     onChange={(e) => setPerfil({ ...perfil, redes: { ...perfil.redes, linkedin: e.target.value } })}
+                    className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">URL o Ruta del CV (Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="/LeandroLalandaCV.pdf"
+                    value={perfil.redes?.cv || ""}
+                    onChange={(e) => setPerfil({ ...perfil, redes: { ...perfil.redes, cv: e.target.value } })}
                     className="w-full px-4 py-2.5 bg-black/50 border border-white/10 rounded-2xl text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30 transition"
                   />
                 </div>

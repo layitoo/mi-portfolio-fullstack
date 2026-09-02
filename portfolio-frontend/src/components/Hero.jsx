@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, ArrowRight, Edit2, Check, X, Loader2, Sparkles } from "lucide-react";
+import { Mail, ArrowRight, Edit2, Check, X, Loader2, Sparkles, Download } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { actualizarPerfil } from "../services/perfil.service";
 import ChromeStar from "./ChromeStar";
@@ -158,14 +158,14 @@ export default function Hero({ perfil, onPerfilActualizado }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3.5">
           <a
             href="#proyectos"
             onClick={(e) => {
               e.preventDefault();
               document.getElementById("proyectos")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="px-6 py-3 rounded-full bg-white text-black font-semibold text-xs sm:text-sm hover:bg-neutral-200 transition-all shadow-lg shadow-white/10 flex items-center gap-2 cursor-pointer"
+            className="px-4.5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-white text-black font-semibold text-xs sm:text-sm hover:bg-neutral-200 transition-all shadow-lg shadow-white/10 flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0"
           >
             Ver Proyectos <ArrowRight className="w-3.5 h-3.5" />
           </a>
@@ -173,35 +173,49 @@ export default function Hero({ perfil, onPerfilActualizado }) {
           {perfil.redes?.email && (
             <a
               href={`mailto:${perfil.redes.email}`}
-              className="px-5 py-3 rounded-full bg-[#121216]/80 hover:bg-neutral-800 text-white font-medium text-xs sm:text-sm border border-white/10 transition flex items-center gap-2 backdrop-blur-md"
+              className="px-4 sm:px-5 py-2.5 sm:py-3 rounded-full bg-[#121216]/80 hover:bg-neutral-800 text-white font-medium text-xs sm:text-sm border border-white/10 transition flex items-center gap-1.5 sm:gap-2 backdrop-blur-md shrink-0"
             >
               <Mail className="w-3.5 h-3.5 text-neutral-400" /> Contactarme
             </a>
           )}
 
-          {perfil.redes?.github && (
-            <a
-              href={perfil.redes.github}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-3 rounded-full bg-[#121216]/80 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/10 transition"
-              title="GitHub"
-            >
-              <GithubIcon className="w-4 h-4" />
-            </a>
-          )}
+          {/* Iconos de Redes y Descarga de CV con el mismo tamaño pequeño */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {perfil.redes?.github && (
+              <a
+                href={perfil.redes.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-[#121216]/80 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/10 transition flex items-center justify-center shrink-0"
+                title="GitHub"
+              >
+                <GithubIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </a>
+            )}
 
-          {perfil.redes?.linkedin && (
+            {perfil.redes?.linkedin && (
+              <a
+                href={perfil.redes.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-[#121216]/80 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/10 transition flex items-center justify-center shrink-0"
+                title="LinkedIn"
+              >
+                <LinkedinIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </a>
+            )}
+
             <a
-              href={perfil.redes.linkedin}
+              href={perfil.redes?.cv || "/LeandroLalandaCV.pdf"}
+              download="LeandroLalandaCV.pdf"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-3 rounded-full bg-[#121216]/80 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/10 transition"
-              title="LinkedIn"
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-[#121216]/80 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-white/10 transition flex items-center justify-center shrink-0 group cursor-pointer"
+              title="Descargar CV (PDF)"
             >
-              <LinkedinIcon className="w-4 h-4" />
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:text-emerald-400 transition-colors" />
             </a>
-          )}
+          </div>
         </div>
       </div>
     </section>
