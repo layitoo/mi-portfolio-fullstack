@@ -79,7 +79,7 @@ export default function Home() {
       <LiquidChromeCanvas />
 
       <div className="relative z-10 flex flex-col min-h-screen justify-between">
-        <Navbar />
+        <Navbar perfil={perfil} />
 
         <main className="flex-1">
           {/* 1. Hero */}

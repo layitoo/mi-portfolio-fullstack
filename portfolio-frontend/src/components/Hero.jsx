@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Mail, Edit2, Check, X, Loader2, Sparkles, Download } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { actualizarPerfil } from "../services/perfil.service";
+import { obtenerUrlDescargaCv, obtenerNombreCv } from "../utils/cvHelper";
 import ChromeStar from "./ChromeStar";
 
 function GithubIcon({ className = "w-4 h-4" }) {
@@ -160,12 +161,12 @@ export default function Hero({ perfil, onPerfilActualizado }) {
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3.5">
           <a
-            href={perfil.redes?.cv || "/LeandroLalandaCV.pdf"}
-            download="LeandroLalandaCV.pdf"
+            href={obtenerUrlDescargaCv(perfil, true)}
+            download={obtenerNombreCv(perfil)}
             target="_blank"
             rel="noopener noreferrer"
             className="px-4.5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-white text-black font-semibold text-xs sm:text-sm hover:bg-neutral-200 transition-all shadow-lg shadow-white/10 flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 whitespace-nowrap"
-            title="Descargar Currículum Vitae (PDF)"
+            title={`Descargar Currículum Vitae (${obtenerNombreCv(perfil)})`}
           >
             <Download className="w-3.5 h-3.5" /> Descargar CV
           </a>
