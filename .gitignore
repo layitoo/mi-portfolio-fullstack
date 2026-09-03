@@ -1,28 +1,78 @@
 # ==========================================
-# DEPENDENCIAS Y BUILDS
-# ==========================================
-node_modules/
-*/node_modules/
-dist/
-*/dist/
-build/
-*/build/
-
-# ==========================================
 # VARIABLES DE ENTORNO Y SECRETOS (CRÍTICO)
 # ==========================================
 .env
-.env.local
-.env.*.local
+.env.*
 *.env
-*/.env
+**/.env
+**/.env.*
+!**/.env.example
 
 # ==========================================
-# ARCHIVOS DE SISTEMA Y LOGS
+# DEPENDENCIAS
+# ==========================================
+node_modules/
+**/node_modules/
+
+# ==========================================
+# BUILDS Y SALIDAS DE COMPILACIÓN
+# ==========================================
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+build/
+**/build/
+.cache/
+**/.cache/
+.vite/
+**/.vite/
+
+# ==========================================
+# LOGS Y DEBUGGING
+# ==========================================
+*.log
+logs/
+**/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# SISTEMA OPERATIVO Y METADATOS
 # ==========================================
 .DS_Store
+**/.DS_Store
 Thumbs.db
-*.log
-npm-debug.log*
+**/Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ==========================================
+# EDITORES E IDES
+# ==========================================
 .vscode/
+**/.vscode/
+!.vscode/extensions.json
 .idea/
+**/.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.bak
+
+# ==========================================
+# ARCHIVOS TEMPORALES Y PRUEBAS
+# ==========================================
+*.tmp
+*.temp
+test_*.html
+test_*.png
+scratch/
+uploads/
+**/uploads/
