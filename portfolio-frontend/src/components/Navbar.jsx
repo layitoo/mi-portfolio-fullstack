@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Shield, LogOut, Sparkles, Menu, X, ArrowUpRight, Download } from "lucide-react";
-import { obtenerUrlDescargaCv, obtenerNombreCv } from "../utils/cvHelper";
+import { Shield, LogOut, Sparkles, Menu, X, ArrowUpRight } from "lucide-react";
 
-export default function Navbar({ perfil }) {
+export default function Navbar() {
   const { usuario, token, logout } = useAuth();
   const esEditor = usuario?.rol === "editor";
   const rolTexto = esEditor ? "Editor" : "Admin";
@@ -136,18 +135,6 @@ export default function Navbar({ perfil }) {
             </div>
           )}
 
-          {/* Botón rápido de CV en Navbar (Desktop) */}
-          <a
-            href={obtenerUrlDescargaCv(perfil, true)}
-            download={obtenerNombreCv(perfil)}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`Descargar CV (${obtenerNombreCv(perfil)})`}
-            className="hidden sm:flex px-3 py-2 rounded-full text-xs font-medium text-neutral-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 transition-all items-center gap-1.5 cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-neutral-400" />
-            <span>CV</span>
-          </a>
 
           {/* Botón de Contacto principal (Desktop/Tablet) */}
           <a
@@ -217,19 +204,6 @@ export default function Navbar({ perfil }) {
             >
               <span className="font-semibold text-white">Educación</span>
               <span className="text-[10px] text-neutral-500 font-mono">04</span>
-            </a>
-            <a
-              href={obtenerUrlDescargaCv(perfil, true)}
-              download={obtenerNombreCv(perfil)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setMenuAbierto(false)}
-              className="flex items-center justify-between px-4 py-2.5 rounded-2xl hover:bg-white/[0.08] text-neutral-300 hover:text-white transition cursor-pointer"
-            >
-              <span className="font-semibold text-white flex items-center gap-2">
-                <Download className="w-3.5 h-3.5 text-neutral-400" /> Descargar CV
-              </span>
-              <span className="text-[10px] text-neutral-500 font-mono">PDF</span>
             </a>
             <a
               href="#contacto"
