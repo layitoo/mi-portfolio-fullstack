@@ -86,6 +86,18 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
 // ====================================================================
+// ENDPOINT KEEP-ALIVE PING (Exento de Rate Limit para el Bot / Uptime Monitors)
+// ====================================================================
+app.get("/api/ping", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    mensaje: "Pong! Servidor despierto y activo ⚡",
+    uptimeSegundos: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ====================================================================
 // RATE LIMITING GLOBAL (Punto 3)
 // ====================================================================
 app.use("/api", globalApiLimiter);
@@ -95,6 +107,7 @@ app.get("/api", (req, res) => {
   res.json({
     mensaje: "API del Portfolio funcionando correctamente 🚀",
     recursos: [
+      "/api/ping",
       "/api/perfil",
       "/api/proyectos",
       "/api/experiencia",
@@ -125,6 +138,10 @@ conectarDB()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en http://localhost:${PORT} 🚀`);
+
+      // Iniciar Keep-Alive Bot automático para mantener despierto Render
+      const { iniciarKeepAliveBot } = require("./services/keepAlive.service");
+      iniciarKeepAliveBot();
     });
   })
   .catch((err) => {
