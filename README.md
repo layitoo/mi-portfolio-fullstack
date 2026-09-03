@@ -104,10 +104,6 @@ Render suspende los servicios en su plan gratuito tras **15 minutos de inactivid
      npm run ping-bot https://tu-backend.onrender.com
      ```
 
-> [!TIP]
-> **Respaldo recomendado en la nube (100% Gratuito):**  
-> Para cubrir posibles reinicios de contenedor por mantenimiento en Render, puedes registrar la URL `https://tu-backend.onrender.com/api/ping` en [cron-job.org](https://cron-job.org) o [uptimerobot.com](https://uptimerobot.com) con frecuencia de 10 minutos.
-
 ---
 
 ## Seguridad y Buenas Prácticas
